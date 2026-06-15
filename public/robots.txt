@@ -1,0 +1,19 @@
+# robots.txt — Khodz Academy
+# https://khodz.com
+
+User-agent: *
+
+# Allow public marketing pages
+Allow: /
+Allow: /courses
+Allow: /courses/
+
+# Block private/auth/api routes from crawlers
+Disallow: /student-dashboard
+Disallow: /admin-dashboard
+Disallow: /auth/
+Disallow: /api/
+Disallow: /payment/
+
+# Sitemap location
+Sitemap: https://khodz.com/sitemap.xml
