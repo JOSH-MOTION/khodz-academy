@@ -107,10 +107,12 @@ function LoginContent() {
   const handleGoogleLogin = async () => {
     try {
       const supabase = createClient();
+      // Use NEXT_PUBLIC_SITE_URL on production (set in Vercel env vars) to avoid localhost redirects
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextUrl)}`,
+          redirectTo: `${siteUrl}/api/auth/callback?next=${encodeURIComponent(nextUrl)}`,
         },
       });
       if (error) throw error;
