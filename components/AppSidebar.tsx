@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import MobileBottomNav from "./MobileBottomNav";
 
 interface AppSidebarProps {
   role?: "student" | "admin";
@@ -31,7 +32,8 @@ export default function AppSidebar({ role = "student" }: AppSidebarProps) {
   const menu = role === "admin" ? adminMenu : studentMenu;
 
   return (
-    <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 py-8 bg-surface-container border-r border-white/10 z-50">
+    <>
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 h-screen w-64 py-8 bg-surface-container border-r border-white/10 z-50">
       {/* Logo */}
       <div className="px-6 mb-8">
         <Link href="/" className="flex items-center">
@@ -111,5 +113,7 @@ export default function AppSidebar({ role = "student" }: AppSidebarProps) {
         </Link>
       </div>
     </aside>
-  );
+    <MobileBottomNav role={role} />
+  </>
+);
 }

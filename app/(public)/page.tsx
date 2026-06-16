@@ -96,9 +96,9 @@ export default function HomePage() {
               <h2 className="font-syne text-display-md text-white mb-2 text-3xl font-bold">Featured Programs</h2>
               <p className="text-on-surface-variant text-sm">Intensive cohorts designed for professional mastery.</p>
             </div>
-            <a className="text-primary font-bold flex items-center gap-2 hover:underline text-sm" href="#">
+            <Link className="text-primary font-bold flex items-center gap-2 hover:underline text-sm" href="/courses">
               View All <span className="material-symbols-outlined text-sm">arrow_forward</span>
-            </a>
+            </Link>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-lg gap-8">

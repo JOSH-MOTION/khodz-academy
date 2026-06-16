@@ -13,13 +13,21 @@ const dmMono = DM_Mono({
   weight: ["400", "500"],
 });
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL
+  ? process.env.NEXT_PUBLIC_APP_URL
+  : process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "https://khodz.com";
+
 export const metadata: Metadata = {
   title: "Khodz Academy — High Performance LMS",
   description:
     "Khodz Academy is a high-performance Learning Management System built for coders. Master programming through structured video lessons, slides, and live progress tracking.",
   keywords: ["Khodz Academy", "LMS", "coding school", "programming courses", "online learning"],
   authors: [{ name: "Khodz Academy", url: "https://khodz.com" }],
-  metadataBase: new URL("https://khodz.com"),
+  metadataBase: new URL(baseUrl),
 
   // ── Open Graph ──
   // og-image.png: 1200×630px — navy (#010d1a) background with cyan logo centred

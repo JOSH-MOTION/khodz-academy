@@ -69,7 +69,7 @@ export default function StudentDashboardPage() {
   ];
 
   return (
-    <div className="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden flex flex-col pb-16 md:pb-0">
+    <div className="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden flex flex-col pb-16 lg:pb-0">
       {/* Top Warning Banner */}
       {!warningDismissed && (
         <div className="w-full bg-error-container text-on-error-container py-stack-sm px-gutter flex items-center justify-between sticky top-0 z-[60] border-b border-error/20 px-6 py-2 gap-4">
@@ -361,21 +361,6 @@ export default function StudentDashboardPage() {
         </main>
       </div>
 
-      {/* Mobile Nav Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 w-full bg-surface-container border-t border-white/10 py-stack-sm flex justify-around items-center z-[50] py-2">
-        {menuItems.slice(0, 4).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center cursor-pointer ${
-              activeTab === item.id ? "text-primary" : "text-on-surface-variant"
-            }`}
-          >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="text-[10px] font-bold mt-1">{item.label}</span>
-          </button>
-        ))}
-      </div>
 
       {/* Floating Action Button */}
       <button className="fixed bottom-gutter right-gutter bottom-8 right-8 w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-lg shadow-primary/20 flex items-center justify-center z-[55] hover:scale-105 active:scale-95 transition-transform cursor-pointer text-white bg-brand">

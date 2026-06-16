@@ -461,21 +461,6 @@ export default function AdminDashboardPage() {
         </footer>
       </main>
 
-      {/* Mobile Navigation (Bottom Bar) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full bg-surface-container border-t border-white/10 px-gutter py-stack-sm flex justify-around items-center z-50 py-2">
-        {menuItems.slice(0, 4).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center gap-1 cursor-pointer ${
-              activeTab === item.id ? "text-primary" : "text-on-surface-variant"
-            }`}
-          >
-            <span className="material-symbols-outlined">{item.icon}</span>
-            <span className="text-[10px] font-bold uppercase">{item.label}</span>
-          </button>
-        ))}
-      </nav>
 
       {/* Add Student Modal Overlay */}
       {showAddModal && (
