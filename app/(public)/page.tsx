@@ -9,7 +9,7 @@ export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   const featuredCourses = COURSES.filter((c) =>
-    ["beginner-web-design", "mern-engineering", "kids-coding-camp"].includes(c.id)
+    ["vacation-web-foundations", "vacation-advanced-web-apps", "mern-engineering"].includes(c.id)
   );
 
   const toggleFaq = (index: number) => {
@@ -216,7 +216,7 @@ export default function HomePage() {
                 {"★★★★★"}
               </div>
               <p className="text-body-md text-on-surface italic mb-stack-lg text-sm mb-6">
-                &ldquo;The focus on production architecture is what sets this academy apart. You don't just learn syntax; you learn how to think like a staff engineer.&rdquo;
+                &ldquo;The focus on production architecture is what sets this academy apart. You don&apos;t just learn syntax; you learn how to think like a staff engineer.&rdquo;
               </p>
               <div className="flex items-center gap-stack-md gap-4">
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
@@ -239,7 +239,7 @@ export default function HomePage() {
                 {"★★★★★"}
               </div>
               <p className="text-body-md text-on-surface italic mb-stack-lg text-sm mb-6">
-                &ldquo;Going from 'tutorial hell' to shipping real features was exactly what I needed. The mentorship and code reviews were brutal but invaluable.&rdquo;
+                &ldquo;Going from &apos;tutorial hell&apos; to shipping real features was exactly what I needed. The mentorship and code reviews were brutal but invaluable.&rdquo;
               </p>
               <div className="flex items-center gap-stack-md gap-4">
                 <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">

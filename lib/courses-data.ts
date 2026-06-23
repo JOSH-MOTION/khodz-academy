@@ -618,6 +618,119 @@ export const COURSES: Course[] = [
     tagline: "Spark creativity in kids and teenagers. Learn coding by building games, animations, and cartoon webs.",
     rating: "4.9 (420 Students)",
     enrolledCount: 420
+  },
+  {
+    id: "vacation-web-foundations",
+    title: "Web Foundations (Vacation Coding Program)",
+    category: "Beginner",
+    duration: "2 Months",
+    tuitionGhs: 1200,
+    admissionGhs: 200,
+    totalGhs: 1400,
+    modes: ["Online Live Classes (Google Meet)"],
+    outcomes: [
+      "HTML Structure & Semantic Tags",
+      "CSS Styling & Responsive Design",
+      "Git & GitHub basics",
+      "JavaScript Fundamentals",
+      "DOM Manipulation & Event Listeners",
+      "Hosting & publishing websites"
+    ],
+    projects: [
+      "Personal Portfolio Website",
+      "Responsive Business Landing Page",
+      "Interactive Web Game / Mini Project"
+    ],
+    prerequisites: [
+      "No programming experience required",
+      "A laptop and stable internet connection"
+    ],
+    syllabus: [
+      {
+        num: "01",
+        title: "Month 1: HTML, CSS & Responsive Layouts",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "HTML structure, elements, and semantic tags", preview: true, type: "video" },
+          { title: "CSS selectors, color systems, and text styling", preview: true, type: "video" },
+          { title: "Responsive layouts with Flexbox and Media Queries", preview: false, type: "lock" },
+          { title: "Git workflows and deploying to GitHub Pages", preview: false, type: "lock" }
+        ]
+      },
+      {
+        num: "02",
+        title: "Month 2: JavaScript Logic & DOM Interactive Web",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "JS variables, conditionals, and loops", preview: false, type: "lock" },
+          { title: "Arrays, objects, functions and scopes", preview: false, type: "lock" },
+          { title: "Selecting DOM nodes and event listeners", preview: false, type: "lock" },
+          { title: "Building and launching your Capstone Mini Project", preview: false, type: "lock" }
+        ]
+      }
+    ],
+    img: "https://images.unsplash.com/photo-1547082299-de196ea013d6?auto=format&fit=crop&w=600&q=80",
+    level: "Beginner",
+    sessionsCount: "24 Sessions",
+    tagline: "A perfect program for complete beginners. Learn HTML, CSS, Responsive Design, Git, and Javascript fundamentals through live interactive sessions on Google Meet.",
+    rating: "4.8 (80 Students)",
+    enrolledCount: 80
+  },
+  {
+    id: "vacation-advanced-web-apps",
+    title: "Advanced Web Apps (Vacation Coding Program)",
+    category: "Full Stack",
+    duration: "2 Months",
+    tuitionGhs: 2000,
+    admissionGhs: 200,
+    totalGhs: 2200,
+    modes: ["Online Live Classes (Google Meet)"],
+    outcomes: [
+      "React component hierarchies",
+      "State and Props synchronization",
+      "Asynchronous HTTP and API fetching",
+      "Dynamic user experience & flows",
+      "Vercel / cloud deployment pipelines",
+      "Professional GitHub portfolio construction"
+    ],
+    projects: [
+      "Interactive Single Page React Dashboard",
+      "Dynamic API-Powered Web Application",
+      "Production-grade Capstone Portfolio"
+    ],
+    prerequisites: [
+      "Completion of Web Foundations (Program 1) or equivalent Javascript & HTML/CSS knowledge"
+    ],
+    syllabus: [
+      {
+        num: "01",
+        title: "Month 1: React.js & Component Architectures",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "React paradigm shift, Vite, and JSX basics", preview: true, type: "video" },
+          { title: "Building reusable UI components", preview: true, type: "video" },
+          { title: "Managing local state and interactive inputs", preview: false, type: "lock" },
+          { title: "Synchronizing data flow via props and hooks", preview: false, type: "lock" }
+        ]
+      },
+      {
+        num: "02",
+        title: "Month 2: APIs, Production Projects & Deployment",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "Asynchronous API integration and fetching", preview: false, type: "lock" },
+          { title: "Routing and Multi-page layouts in React", preview: false, type: "lock" },
+          { title: "Deploying high-performance web apps to Vercel", preview: false, type: "lock" },
+          { title: "Reviewing, optimizing, and polishing GitHub portfolio", preview: false, type: "lock" }
+        ]
+      }
+    ],
+    img: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80",
+    level: "Advanced",
+    sessionsCount: "24 Sessions",
+    tagline: "Built for students with HTML/CSS/JS experience. Level up by mastering React components, state, props, API data streams, cloud deployment, and a stunning GitHub portfolio.",
+    rating: "4.9 (60 Students)",
+    enrolledCount: 60
   }
 ];
 

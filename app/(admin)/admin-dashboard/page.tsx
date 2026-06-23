@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import AppSidebar from "@/components/AppSidebar";
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
   const [animateChart, setAnimateChart] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentEmail, setNewStudentEmail] = useState("");
+  const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentTier, setNewStudentTier] = useState("Pro Developer");
 
   // Release lock states for modules
@@ -27,6 +26,7 @@ export default function AdminDashboardPage() {
       initials: "JD",
       name: "Jordan Devlin",
       email: "jordan.d@example.com",
+      phone: "233240000101",
       status: "Active",
       tier: "Elite Mastery",
       payment: "$1,200.00",
@@ -37,6 +37,7 @@ export default function AdminDashboardPage() {
       initials: "SM",
       name: "Sarah Miller",
       email: "sarah.m@design.io",
+      phone: "233240000102",
       status: "Pending",
       tier: "Pro Developer",
       payment: "$450.00",
@@ -47,22 +48,13 @@ export default function AdminDashboardPage() {
       initials: "KB",
       name: "Kevin Black",
       email: "kb@code.net",
+      phone: "233240000103",
       status: "Suspended",
       tier: "Starter",
       payment: "$0.00",
       paymentStatus: "REVOKED",
     },
   ]);
-
-  // Menu items for admin
-  const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-    { id: "courses", label: "My Courses", icon: "school" },
-    { id: "slides", label: "Slides", icon: "present_to_all" },
-    { id: "videos", label: "Videos", icon: "play_circle" },
-    { id: "progress", label: "Progress", icon: "insights" },
-    { id: "settings", label: "Settings", icon: "settings" },
-  ];
 
   useEffect(() => {
     const timer = setTimeout(() => setAnimateChart(true), 100);
@@ -95,6 +87,7 @@ export default function AdminDashboardPage() {
       initials: initials || "ST",
       name: newStudentName,
       email: newStudentEmail,
+      phone: newStudentPhone || "233240000000",
       status: "Pending",
       tier: newStudentTier,
       payment: "$450.00",
@@ -105,6 +98,7 @@ export default function AdminDashboardPage() {
     setShowAddModal(false);
     setNewStudentName("");
     setNewStudentEmail("");
+    setNewStudentPhone("");
   };
 
   const handleToggleRelease = (id: string) => {
@@ -275,7 +269,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <div>
                             <div className="text-on-surface font-semibold">{student.name}</div>
-                            <div className="text-[10px] text-on-surface-variant">{student.email}</div>
+                            <div className="text-[10px] text-on-surface-variant">{student.email}{student.phone ? ` • ${student.phone}` : ""}</div>
                           </div>
                         </div>
                       </td>
@@ -311,6 +305,19 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="p-stack-md p-4">
                         <div className="flex items-center justify-center gap-2">
+                          {student.phone && (
+                            <a
+                              href={`https://wa.me/${student.phone}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-[#25D366] transition-colors flex items-center justify-center cursor-pointer"
+                              title="Chat on WhatsApp"
+                            >
+                              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.665.989 3.3.15 5.336.15 5.548 0 10.061-4.512 10.064-10.064.002-2.69-1.042-5.219-2.937-7.117-1.894-1.897-4.417-2.942-7.106-2.943-5.556 0-10.068 4.513-10.072 10.067-.001 2.01.523 3.974 1.517 5.717L2.148 21.83l6.5-.676zM17.7 14.542c-.31-.156-1.838-.907-2.122-1.01-.284-.103-.49-.156-.696.156-.206.31-.798 1.01-.978 1.216-.18.206-.36.232-.67.077-.31-.156-1.31-.483-2.496-1.542-.924-.824-1.547-1.842-1.728-2.152-.18-.31-.02-.477.135-.632.14-.139.31-.36.465-.54.155-.18.206-.31.31-.516.103-.207.05-.387-.025-.542-.077-.156-.696-1.678-.954-2.298-.25-.602-.503-.52-.69-.53l-.587-.01c-.206 0-.54.077-.824.387-.284.31-1.082 1.057-1.082 2.578 0 1.52 1.108 2.99 1.263 3.196.155.206 2.18 3.327 5.28 4.664.737.318 1.312.507 1.76.65.74.235 1.414.201 1.947.122.593-.087 1.838-.75 2.096-1.472.258-.722.258-1.342.18-1.472-.078-.13-.284-.207-.593-.363z"/>
+                              </svg>
+                            </a>
+                          )}
                           {student.status === "Pending" ? (
                             <button
                               onClick={() => handleApprove(student.id)}
@@ -496,6 +503,17 @@ export default function AdminDashboardPage() {
                   className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white bg-[#08100b]"
                   placeholder="kofi@example.com"
                   type="email"
+                />
+              </div>
+              <div className="space-y-2 flex flex-col">
+                <label className="text-on-surface-variant font-semibold">Phone Number (WhatsApp)</label>
+                <input
+                  required
+                  value={newStudentPhone}
+                  onChange={(e) => setNewStudentPhone(e.target.value)}
+                  className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white bg-[#08100b]"
+                  placeholder="233240000000"
+                  type="tel"
                 />
               </div>
               <div className="space-y-2 flex flex-col">

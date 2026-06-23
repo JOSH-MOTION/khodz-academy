@@ -15,10 +15,19 @@ export async function canAccessLesson(
 
   if (lessonError || !lesson) return { allowed: false, reason: 'lesson_not_found' };
 
-  // @ts-ignore
-  const courseId = lesson.weeks.course_id;
-  // @ts-ignore
-  const weekNumber = lesson.weeks.week_number;
+  const lessonData = lesson as unknown as {
+    weeks: {
+      week_number: number;
+      course_id: string;
+    } | null;
+  };
+
+  const courseId = lessonData.weeks?.course_id;
+  const weekNumber = lessonData.weeks?.week_number;
+
+  if (!courseId || weekNumber === undefined || weekNumber === null) {
+    return { allowed: false, reason: 'lesson_not_found' };
+  }
 
   // 2. Get student enrolment for this course
   const { data: enrolment, error: enrolError } = await supabase

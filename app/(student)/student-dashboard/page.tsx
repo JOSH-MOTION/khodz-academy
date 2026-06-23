@@ -5,19 +5,13 @@ import Link from "next/link";
 import AppSidebar from "@/components/AppSidebar";
 import { createClient } from "@/lib/supabase/client";
 
+interface UserProfile {
+  role?: string;
+}
+
 export default function StudentDashboardPage() {
   const [warningDismissed, setWarningDismissed] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [searchQuery, setSearchQuery] = useState("");
-
-  const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: "dashboard" },
-    { id: "courses", label: "My Courses", icon: "school" },
-    { id: "slides", label: "Slides", icon: "present_to_all" },
-    { id: "videos", label: "Videos", icon: "play_circle" },
-    { id: "progress", label: "Progress", icon: "insights" },
-    { id: "settings", label: "Settings", icon: "settings" },
-  ];
 
   // Chart bar load animation helper
   const [animateChart, setAnimateChart] = useState(false);
@@ -26,8 +20,7 @@ export default function StudentDashboardPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>("https://lh3.googleusercontent.com/aida-public/AB6AXuCXcZ0Y-k35tsaUPewSwh8RfmTddpo7nlyD1GZOHEi8WUuXSF5HqmklT4tkJieXXVFTmHt9AIizG5_biJQzl0MZ1kR693G50tC_qXtsLwd8bvnIHodQ32ccNCgtYIuGAjJbUapSEC3oLybUKIyXYey_SEcXm159Wl-2xEs5NUoDd1cZgdxNozNwmM-DPLNTwqwOqLCp3Msok09iItHHxPIa6V5JHhOwtAR0EZ3a182zZGP-yMNwWfbCbXyL6Zk4vzW_i4OgY_oDl7s");
   const [displayName, setDisplayName] = useState<string>("Student");
 
@@ -36,7 +29,6 @@ export default function StudentDashboardPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         setDisplayName(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Student");
         if (user.user_metadata?.avatar_url) {
           setAvatarUrl(user.user_metadata.avatar_url);
@@ -48,7 +40,7 @@ export default function StudentDashboardPage() {
           .eq("id", user.id)
           .single();
         if (profileData) {
-          setProfile(profileData);
+          setProfile(profileData as UserProfile);
         }
       }
     };
@@ -56,40 +48,30 @@ export default function StudentDashboardPage() {
   }, []);
 
   const chartData = [
-    { day: 1, height: "20%" },
-    { day: 2, height: "35%" },
-    { day: 3, height: "25%" },
-    { day: 4, height: "45%" },
+    { day: 1, height: "20%", active: false, tooltip: "" },
+    { day: 2, height: "35%", active: false, tooltip: "" },
+    { day: 3, height: "25%", active: false, tooltip: "" },
+    { day: 4, height: "45%", active: false, tooltip: "" },
     { day: 5, height: "70%", active: true, tooltip: "4.2 hrs Today" },
-    { day: 6, height: "40%" },
-    { day: 7, height: "15%" },
-    { day: 8, height: "60%" },
-    { day: 9, height: "30%" },
-    { day: 10, height: "50%" },
+    { day: 6, height: "40%", active: false, tooltip: "" },
+    { day: 7, height: "15%", active: false, tooltip: "" },
+    { day: 8, height: "60%", active: false, tooltip: "" },
+    { day: 9, height: "30%", active: false, tooltip: "" },
+    { day: 10, height: "50%", active: false, tooltip: "" },
   ];
 
   return (
-    <div className="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden flex flex-col pb-16 lg:pb-0">
-      {/* Top Warning Banner */}
+    <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
+      {/* Network water warning */}
       {!warningDismissed && (
-        <div className="w-full bg-error-container text-on-error-container py-stack-sm px-gutter flex items-center justify-between sticky top-0 z-[60] border-b border-error/20 px-6 py-2 gap-4">
-          <div className="flex items-center gap-stack-md gap-3">
-            <span className="material-symbols-outlined text-[20px] text-error">warning</span>
-            <p className="font-label-md text-sm">
-              Pending balance detected. Complete your payment by Friday to maintain full access to advanced modules.
-            </p>
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-gutter py-2 flex items-center justify-between text-xs text-amber-400 font-bold z-[100] px-6">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">warning</span>
+            <span>SIMULATED SANDBOX ACCESS — REALTIME SYNC DISABLED</span>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/payment/balance" className="bg-on-error-container text-error-container px-stack-md py-1 rounded-full font-label-md text-xs hover:opacity-90 transition-opacity cursor-pointer font-bold px-3 py-1 bg-white text-black text-center decoration-none">
-              Pay Now
-            </Link>
-            <button
-              onClick={() => setWarningDismissed(true)}
-              className="material-symbols-outlined hover:text-white cursor-pointer text-sm"
-            >
-              close
-            </button>
-          </div>
+          <button onClick={() => setWarningDismissed(true)} className="material-symbols-outlined text-sm opacity-60 hover:opacity-100 cursor-pointer">
+            close
+          </button>
         </div>
       )}
 
@@ -104,7 +86,7 @@ export default function StudentDashboardPage() {
               <h2 className="font-syne text-headline-md text-on-surface leading-none text-xl font-bold">
                 Welcome back, {displayName.split(" ")[0]}
               </h2>
-              <p className="font-body-sm text-xs text-on-surface-variant mt-1">Let's continue your mastery journey.</p>
+              <p className="font-body-sm text-xs text-on-surface-variant mt-1">Let&apos;s continue your mastery journey.</p>
             </div>
             
             <div className="flex items-center gap-stack-md gap-4">

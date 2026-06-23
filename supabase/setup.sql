@@ -54,7 +54,9 @@ VALUES
   ('frontend-program', 'Frontend Development Program', 'Accelerate your frontend career. Zero to React.js developer in three months of intensive live classes.', 3500.00, 'Cohort 04'),
   ('mern-engineering', 'Full Stack MERN Engineering Program', 'The ultimate developer accelerator. Design, build, secure, and deploy full stack web apps on the MERN stack.', 6500.00, 'Cohort 04'),
   ('weekend-engineering', 'Weekend Software Engineering Program', 'Master full-stack engineering on weekends. Built for working professionals who want to transition to tech.', 4500.00, 'Cohort 04'),
-  ('kids-coding-camp', 'Kids & Teens Coding Camp', 'Spark creativity in kids and teenagers. Learn coding by building games, animations, and cartoon webs.', 1000.00, 'Cohort 04')
+  ('kids-coding-camp', 'Kids & Teens Coding Camp', 'Spark creativity in kids and teenagers. Learn coding by building games, animations, and cartoon webs.', 1000.00, 'Cohort 04'),
+  ('vacation-web-foundations', 'Web Foundations (Vacation Coding Program)', 'For complete beginners. Learn HTML, CSS, Git, and Javascript fundamentals through live interactive sessions on Google Meet.', 1400.00, 'Cohort 01'),
+  ('vacation-advanced-web-apps', 'Advanced Web Apps (Vacation Coding Program)', 'Master React components, state, props, API data streams, cloud deployment, and portfolio building.', 2200.00, 'Cohort 01')
 ON CONFLICT (id) DO NOTHING;
 
 -- ── 3. weeks table ─────────────────────────────────────────

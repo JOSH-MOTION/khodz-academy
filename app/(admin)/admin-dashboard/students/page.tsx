@@ -9,6 +9,7 @@ interface Student {
   id: string;
   name: string;
   email: string;
+  phone: string;
   cohort: string;
   enrolled: string;
   progress: number;
@@ -17,14 +18,14 @@ interface Student {
 }
 
 const studentsData: Student[] = [
-  { id: "s1",  name: "Kwame Asante",    email: "kwame@khodz.academy",    cohort: "Cohort 04", enrolled: "Jan 2024", progress: 87, status: "Active",   avatar: "KA" },
-  { id: "s2",  name: "Ama Owusu",       email: "ama@khodz.academy",       cohort: "Cohort 04", enrolled: "Jan 2024", progress: 62, status: "Active",   avatar: "AO" },
-  { id: "s3",  name: "Kofi Mensah",     email: "kofi@khodz.academy",     cohort: "Cohort 03", enrolled: "Sep 2023", progress: 100, status: "Inactive", avatar: "KM" },
-  { id: "s4",  name: "Abena Boateng",   email: "abena@khodz.academy",   cohort: "Cohort 04", enrolled: "Feb 2024", progress: 44, status: "Pending",  avatar: "AB" },
-  { id: "s5",  name: "Yaw Darko",       email: "yaw@khodz.academy",       cohort: "Cohort 03", enrolled: "Oct 2023", progress: 78, status: "Active",   avatar: "YD" },
-  { id: "s6",  name: "Efua Koomson",    email: "efua@khodz.academy",    cohort: "Cohort 04", enrolled: "Feb 2024", progress: 15, status: "Pending",  avatar: "EK" },
-  { id: "s7",  name: "Nana Adjei",      email: "nana@khodz.academy",      cohort: "Cohort 04", enrolled: "Jan 2024", progress: 55, status: "Active",   avatar: "NA" },
-  { id: "s8",  name: "Akosua Frimpong", email: "akosua@khodz.academy", cohort: "Cohort 03", enrolled: "Sep 2023", progress: 93, status: "Active",   avatar: "AF" },
+  { id: "s1",  name: "Kwame Asante",    email: "kwame@khodz.academy",    phone: "233240000001", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 87, status: "Active",   avatar: "KA" },
+  { id: "s2",  name: "Ama Owusu",       email: "ama@khodz.academy",       phone: "233240000002", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 62, status: "Active",   avatar: "AO" },
+  { id: "s3",  name: "Kofi Mensah",     email: "kofi@khodz.academy",     phone: "233240000003", cohort: "Cohort 03", enrolled: "Sep 2023", progress: 100, status: "Inactive", avatar: "KM" },
+  { id: "s4",  name: "Abena Boateng",   email: "abena@khodz.academy",   phone: "233240000004", cohort: "Cohort 04", enrolled: "Feb 2024", progress: 44, status: "Pending",  avatar: "AB" },
+  { id: "s5",  name: "Yaw Darko",       email: "yaw@khodz.academy",       phone: "233240000005", cohort: "Cohort 03", enrolled: "Oct 2023", progress: 78, status: "Active",   avatar: "YD" },
+  { id: "s6",  name: "Efua Koomson",    email: "efua@khodz.academy",    phone: "233240000006", cohort: "Cohort 04", enrolled: "Feb 2024", progress: 15, status: "Pending",  avatar: "EK" },
+  { id: "s7",  name: "Nana Adjei",      email: "nana@khodz.academy",      phone: "233240000007", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 55, status: "Active",   avatar: "NA" },
+  { id: "s8",  name: "Akosua Frimpong", email: "akosua@khodz.academy", phone: "233240000008", cohort: "Cohort 03", enrolled: "Sep 2023", progress: 93, status: "Active",   avatar: "AF" },
 ];
 
 const statusColors: Record<Status, string> = {
@@ -162,7 +163,7 @@ export default function AdminStudentsPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-xs text-on-surface truncate">{student.name}</p>
-                            <p className="text-[10px] text-on-surface-variant truncate">{student.email}</p>
+                            <p className="text-[10px] text-on-surface-variant truncate">{student.email} • {student.phone}</p>
                           </div>
                         </div>
                       </td>
@@ -207,6 +208,17 @@ export default function AdminStudentsPage() {
                           >
                             <span className="material-symbols-outlined text-base">mail</span>
                           </button>
+                          <a
+                            href={`https://wa.me/${student.phone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-[#25D366] transition-colors flex items-center justify-center cursor-pointer"
+                            title="Chat on WhatsApp"
+                          >
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.665.989 3.3.15 5.336.15 5.548 0 10.061-4.512 10.064-10.064.002-2.69-1.042-5.219-2.937-7.117-1.894-1.897-4.417-2.942-7.106-2.943-5.556 0-10.068 4.513-10.072 10.067-.001 2.01.523 3.974 1.517 5.717L2.148 21.83l6.5-.676zM17.7 14.542c-.31-.156-1.838-.907-2.122-1.01-.284-.103-.49-.156-.696.156-.206.31-.798 1.01-.978 1.216-.18.206-.36.232-.67.077-.31-.156-1.31-.483-2.496-1.542-.924-.824-1.547-1.842-1.728-2.152-.18-.31-.02-.477.135-.632.14-.139.31-.36.465-.54.155-.18.206-.31.31-.516.103-.207.05-.387-.025-.542-.077-.156-.696-1.678-.954-2.298-.25-.602-.503-.52-.69-.53l-.587-.01c-.206 0-.54.077-.824.387-.284.31-1.082 1.057-1.082 2.578 0 1.52 1.108 2.99 1.263 3.196.155.206 2.18 3.327 5.28 4.664.737.318 1.312.507 1.76.65.74.235 1.414.201 1.947.122.593-.087 1.838-.75 2.096-1.472.258-.722.258-1.342.18-1.472-.078-.13-.284-.207-.593-.363z"/>
+                            </svg>
+                          </a>
                           <button
                             className="p-1.5 hover:bg-error/10 rounded text-on-surface-variant hover:text-error transition-colors cursor-pointer"
                             title="Remove student"

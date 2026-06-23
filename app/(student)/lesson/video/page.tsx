@@ -209,13 +209,13 @@ export default function VideoLessonPage() {
               <article className="space-y-4 text-on-surface-variant">
                 <p className="text-sm leading-relaxed">
                   In this session, we deep-dive into micro-kernel architectures and how to manage global state without compromising
-                  on performance. We'll explore why standard Redux-like patterns fail at scale and what "High Performance" actually
+                  on performance. We&apos;ll explore why standard Redux-like patterns fail at scale and what &ldquo;High Performance&rdquo; actually
                   means in a distributed environment.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-surface-container-low p-4 border-l-4 border-primary rounded-r-lg">
                     <h4 className="font-syne text-xs font-bold text-primary mb-1 tracking-widest">KEY TAKEAWAY</h4>
-                    <p className="text-xs italic">"Complexity is the enemy of performance. Always optimize for the hot path before generalizing the abstraction."</p>
+                    <p className="text-xs italic">&ldquo;Complexity is the enemy of performance. Always optimize for the hot path before generalizing the abstraction.&rdquo;</p>
                   </div>
                   <div className="bg-surface-container-low p-4 border-l-4 border-secondary rounded-r-lg">
                     <h4 className="font-syne text-xs font-bold text-secondary mb-1 tracking-widest">PRO TIP</h4>

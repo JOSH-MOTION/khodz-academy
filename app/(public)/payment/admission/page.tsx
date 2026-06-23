@@ -13,19 +13,25 @@ function getCoursePaymentInfo(courseId: string) {
   
   let platformFee = 50;
   if (admission === 250) platformFee = 25;
+  else if (admission === 200) platformFee = 20;
   else if (admission === 100) platformFee = 15;
   
   const netPrice = admission - platformFee;
   const isBootcamp = course.id === "beginner-web-design";
+  const isVacation = course.id.includes("vacation");
 
   return {
     id: course.id,
     name: course.title,
-    cohort: isBootcamp ? "Phase 1 - Introductory Bootcamp" : "Cohort 04 - Admission Fee",
+    cohort: isBootcamp 
+      ? "Phase 1 - Introductory Bootcamp" 
+      : isVacation 
+        ? "Vacation Program - Cohort 01" 
+        : "Cohort 04 - Admission Fee",
     price: `GHS ${netPrice.toFixed(2)}`,
     fee: `GHS ${platformFee.toFixed(2)}`,
     total: `GHS ${admission.toFixed(2)}`,
-    feeLabel: isBootcamp ? "Registration processing fee" : "Platform access fee",
+    feeLabel: (isBootcamp || isVacation) ? "Registration processing fee" : "Platform access fee",
   };
 }
 
@@ -40,7 +46,6 @@ function AdmissionPaymentContent() {
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [user, setUser] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   // Pre-fill user info from Supabase auth session
@@ -49,7 +54,6 @@ function AdmissionPaymentContent() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         setFormData({
           name: user.user_metadata?.full_name || user.user_metadata?.name || "",
           email: user.email || "",
@@ -94,9 +98,10 @@ function AdmissionPaymentContent() {
       // Simulate Paystack popup (replace with real Paystack JS SDK integration)
       setSubmitState("success");
       setTimeout(() => router.push("/student-dashboard"), 2500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setSubmitState("error");
-      setErrorMsg(err.message || "Something went wrong. Please try again.");
+      const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setErrorMsg(message);
     }
   };
 

@@ -129,14 +129,14 @@ export default function StudentProgressPage() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h3 className="font-syne text-lg font-semibold text-white">Project Deliverables</h3>
                 <div className="flex bg-surface-container-low p-1 rounded-lg border border-white/5 text-xs">
-                  {["all", "completed", "pending"].map((filter) => (
+                  {(["all", "completed", "pending"] as const).map((filter) => (
                     <button
                       key={filter}
-                      onClick={() => setActiveFilter(filter as any)}
+                      onClick={() => setActiveFilter(filter)}
                       className={`px-3 py-1.5 rounded-md font-semibold transition-all capitalize cursor-pointer ${
                         activeFilter === filter
-                          ? "bg-secondary-container text-on-secondary-container"
-                          : "text-on-surface-variant hover:text-on-surface"
+                           ? "bg-secondary-container text-on-secondary-container"
+                           : "text-on-surface-variant hover:text-on-surface"
                       }`}
                     >
                       {filter}

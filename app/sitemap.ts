@@ -12,6 +12,8 @@ const courseIds = [
   "mern-engineering",
   "weekend-engineering",
   "kids-coding-camp",
+  "vacation-web-foundations",
+  "vacation-advanced-web-apps",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

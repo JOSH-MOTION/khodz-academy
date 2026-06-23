@@ -7,14 +7,9 @@ import { COURSES } from "@/lib/courses-data";
 
 export default function CoursesPage() {
   const [filter, setFilter] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCourses = COURSES.filter((course) => {
-    const matchesFilter = filter === "All" || course.category === filter;
-    const matchesSearch =
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return filter === "All" || course.category === filter;
   });
 
   return (
@@ -48,34 +43,32 @@ export default function CoursesPage() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-stack-lg gap-8">
-          {/* Courses Grid */}
-          <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-stack-lg gap-6">
+          {/* Main List */}
+          <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-stack-md gap-6">
             {filteredCourses.map((course) => (
-              <div key={course.id} className="glass-card rounded-lg overflow-hidden flex flex-col course-card-hover transition-all duration-300">
-                <div className="relative h-48 w-full bg-surface-container">
-                  <img
-                    className="w-full h-full object-cover opacity-80 transition-opacity hover:opacity-100"
-                    alt={course.title}
-                    src={course.img}
-                  />
-                  <div className="absolute top-2 left-2 px-2 py-0.5 bg-primary/20 backdrop-blur-md border border-primary/30 rounded">
-                    <span className="text-primary text-[10px] uppercase font-bold tracking-widest">{course.category}</span>
+              <div key={course.id} className="glass-card glow-hover rounded-xl p-stack-md p-4 group transition-all duration-300 flex flex-col justify-between">
+                <div>
+                  <div className="relative h-48 mb-stack-md rounded-lg overflow-hidden mb-4">
+                    <img
+                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                      alt={course.title}
+                      src={course.img}
+                    />
+                    <span className="absolute top-4 left-4 bg-primary text-background text-xs font-bold px-2 py-1 rounded text-black">
+                      {course.duration.toUpperCase()}
+                    </span>
                   </div>
+                  <h3 className="font-syne text-headline-md text-white mb-2 text-xl font-semibold leading-tight">{course.title}</h3>
+                  <p className="text-on-surface-variant text-xs mb-stack-md mb-4 leading-relaxed">
+                    {course.tagline}
+                  </p>
                 </div>
-                <div className="p-stack-md p-4 flex-1 flex flex-col">
-                  <h3 className="font-syne text-headline-md text-on-surface mb-stack-sm text-base font-semibold">{course.title}</h3>
-                  <div className="flex items-center gap-stack-md gap-4 text-on-surface-variant mb-stack-md mb-4 text-xs mt-2">
-                    <div className="flex items-center gap-unit"><span className="material-symbols-outlined text-[16px] mr-1">schedule</span><span>{course.duration}</span></div>
-                    <div className="flex items-center gap-unit"><span className="material-symbols-outlined text-[16px] mr-1">cast_for_education</span><span>{course.sessionsCount}</span></div>
-                  </div>
-                  <div className="mt-auto pt-stack-md border-t border-white/5 flex items-center justify-between pt-4 text-xs">
-                    <div>
-                      <span className="text-[10px] text-on-surface-variant block uppercase tracking-tighter">Level</span>
-                      <span className="text-primary font-bold">{course.level}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-base text-on-surface font-bold">GHS {course.totalGhs.toLocaleString()}</span>
-                    </div>
+                <div className="flex flex-col border-t border-white/5 pt-stack-md pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-on-surface-variant text-xs">{course.category} • {course.level}</span>
+                    <span className="text-primary font-bold text-sm">
+                      {course.id === "beginner-web-design" ? "GHS 100 Reg." : `GHS ${course.totalGhs.toLocaleString()}`}
+                    </span>
                   </div>
                   <Link href={`/courses/${course.id}`} className="mt-stack-md mt-4 w-full border border-white/20 hover:bg-white/5 text-on-surface font-bold py-2 rounded-lg transition-all text-xs text-center">
                     Learn More
@@ -90,7 +83,7 @@ export default function CoursesPage() {
             <div className="sticky top-32 space-y-stack-lg space-y-6">
               {/* What's Included */}
               <div className="glass-card rounded-lg p-stack-md p-6 border border-white/10">
-                <h4 className="font-syne text-headline-md text-primary mb-stack-md text-sm font-bold mb-4">What's included</h4>
+                <h4 className="font-syne text-headline-md text-primary mb-stack-md text-sm font-bold mb-4">What&apos;s included</h4>
                 <ul className="space-y-stack-sm space-y-3">
                   {[
                     "Lifetime access to HD recording sessions.",
