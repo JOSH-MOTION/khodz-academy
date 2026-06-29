@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
+import { COURSES_MAP } from '@/lib/courses-data'
+import { sendReceiptEmail, sendPaymentDueEmail } from '@/lib/mail'
 
 export async function POST(request: Request) {
   // 1. Verify webhook signature from Paystack
@@ -22,6 +24,16 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient() // Service role — bypasses RLS
 
+  // Fetch student info from Supabase Auth Admin
+  const { data: { user: studentUser } } = await supabase.auth.admin.getUserById(studentId)
+  const studentEmail = studentUser?.email || ""
+  const studentName = studentUser?.user_metadata?.full_name || studentUser?.user_metadata?.name || studentEmail.split("@")[0] || "Student"
+
+  const course = COURSES_MAP[courseId]
+  const courseTitle = course?.title || 'Selected Program'
+
+  const amountPaidGhs = amount / 100 // converted back to GHS
+
   // 2. Log the payment
   await supabase.from('payments').insert({
     student_id: studentId,
@@ -32,11 +44,38 @@ export async function POST(request: Request) {
     paid_at: new Date().toISOString(),
   })
 
-  // 3. Upgrade enrolment tier
+  // 3. Upgrade enrolment tier & send email
   if (paymentType === 'admission') {
+    const deadline = new Date()
+    if (course && course.startDate) {
+      const start = new Date(course.startDate)
+      const threeWeeksBefore = new Date(start.getTime() - 21 * 24 * 60 * 60 * 1000)
+      if (threeWeeksBefore > new Date()) {
+        deadline.setTime(threeWeeksBefore.getTime())
+      } else {
+        deadline.setDate(deadline.getDate() + 30) // fallback: 30 days
+      }
+    } else {
+      deadline.setDate(deadline.getDate() + 30)
+    }
+
     await supabase.from('enrolments')
-      .upsert({ student_id: studentId, course_id: courseId,
-                tier: 'admitted', admission_paid_at: new Date().toISOString() })
+      .upsert({ 
+        student_id: studentId, 
+        course_id: courseId,
+        tier: 'admitted', 
+        admission_paid_at: new Date().toISOString(),
+        payment_deadline: deadline.toISOString(),
+        waterline_week: 4
+      }, { onConflict: 'student_id,course_id' })
+
+    // Send confirmation receipt
+    await sendReceiptEmail(studentEmail, studentName, courseTitle, amountPaidGhs, reference)
+
+    // Send remaining balance/deadline notification
+    if (course) {
+      await sendPaymentDueEmail(studentEmail, studentName, courseTitle, course.tuitionGhs, deadline.toISOString())
+    }
   }
 
   if (paymentType === 'deposit') {
@@ -50,15 +89,31 @@ export async function POST(request: Request) {
     const currentWeek = weeks?.length ?? 0
     
     await supabase.from('enrolments')
-      .update({ tier: 'deposited', deposit_paid_at: new Date().toISOString(),
-                payment_deadline: deadline.toISOString(), waterline_week: currentWeek })
-      .eq('student_id', studentId).eq('course_id', courseId)
+      .upsert({ 
+        student_id: studentId, 
+        course_id: courseId,
+        tier: 'deposited', 
+        deposit_paid_at: new Date().toISOString(),
+        payment_deadline: deadline.toISOString(), 
+        waterline_week: currentWeek 
+      }, { onConflict: 'student_id,course_id' })
+
+    // Send confirmation receipt
+    await sendReceiptEmail(studentEmail, studentName, courseTitle, amountPaidGhs, reference)
   }
 
-  if (paymentType === 'balance') {
+  if (paymentType === 'balance' || paymentType === 'full') {
     await supabase.from('enrolments')
-      .update({ tier: 'paid', full_payment_paid_at: new Date().toISOString() })
-      .eq('student_id', studentId).eq('course_id', courseId)
+      .upsert({ 
+        student_id: studentId, 
+        course_id: courseId,
+        tier: 'paid', 
+        full_payment_paid_at: new Date().toISOString(),
+        waterline_week: 100 // fully unlocked
+      }, { onConflict: 'student_id,course_id' })
+
+    // Send confirmation receipt
+    await sendReceiptEmail(studentEmail, studentName, courseTitle, amountPaidGhs, reference)
   }
 
   return NextResponse.json({ ok: true })

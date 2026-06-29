@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { COURSES_MAP } from '@/lib/courses-data';
 
 export async function POST(request: Request) {
   try {
@@ -12,22 +13,29 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { courseId, name, phone } = body;
+    const { courseId, paymentType = 'admission', name, phone } = body;
 
     if (!courseId) {
       return NextResponse.json({ error: 'courseId is required' }, { status: 400 });
     }
 
-    // Check if already enrolled
-    const { data: existing } = await supabase
-      .from('enrolments')
-      .select('id')
-      .eq('student_id', user.id)
-      .eq('course_id', courseId)
-      .single();
+    const course = COURSES_MAP[courseId];
+    if (!course) {
+      return NextResponse.json({ error: 'Invalid courseId' }, { status: 400 });
+    }
 
-    if (existing) {
-      return NextResponse.json({ error: 'already_enrolled', enrolmentId: existing.id }, { status: 409 });
+    // Determine the amount dynamically based on paymentType
+    let amountGhs = 0;
+    if (paymentType === 'admission') {
+      amountGhs = course.admissionGhs;
+    } else if (paymentType === 'deposit') {
+      amountGhs = course.tuitionGhs * 0.5;
+    } else if (paymentType === 'balance') {
+      amountGhs = course.tuitionGhs;
+    } else if (paymentType === 'full') {
+      amountGhs = course.admissionGhs + course.tuitionGhs;
+    } else {
+      return NextResponse.json({ error: 'Invalid paymentType' }, { status: 400 });
     }
 
     // Update profile with name/phone if provided
@@ -42,29 +50,46 @@ export async function POST(request: Request) {
         }, { onConflict: 'id' });
     }
 
-    // Create the enrolment record (deposited tier)
-    const paymentDeadline = new Date();
-    paymentDeadline.setDate(paymentDeadline.getDate() + 30); // 30-day deadline to pay full amount
-
-    const { data: enrolment, error: insertError } = await supabase
-      .from('enrolments')
-      .insert({
-        student_id: user.id,
-        course_id: courseId,
-        tier: 'deposited',
-        waterline_week: 4, // default: first 4 weeks unlocked
-        payment_deadline: paymentDeadline.toISOString(),
-        enrolled_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Enrolment insert error:', insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    // Call Paystack API to initialize transaction
+    const paystackSecret = process.env.PAYSTACK_SECRET_KEY;
+    if (!paystackSecret) {
+      console.error('PAYSTACK_SECRET_KEY is not configured');
+      return NextResponse.json({ error: 'Payment gateway configuration error' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, enrolment }, { status: 201 });
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const callbackUrl = `${siteUrl}/student-dashboard`;
+
+    const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${paystackSecret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: user.email,
+        amount: Math.round(amountGhs * 100), // in GHS pesewas/cents
+        callback_url: callbackUrl,
+        metadata: {
+          studentId: user.id,
+          courseId,
+          paymentType,
+        },
+      }),
+    });
+
+    const paystackData = await paystackResponse.json();
+
+    if (!paystackResponse.ok || !paystackData.status) {
+      console.error('Paystack initialization failed:', paystackData);
+      return NextResponse.json({ error: paystackData.message || 'Failed to initialize Paystack' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      authorizationUrl: paystackData.data.authorization_url,
+      reference: paystackData.data.reference,
+    });
   } catch (err) {
     console.error('Enrol API error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

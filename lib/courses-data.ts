@@ -24,6 +24,7 @@ export interface Course {
   tagline: string;
   rating: string;
   enrolledCount: number;
+  startDate?: string;
 }
 
 export const COURSES: Course[] = [
@@ -627,6 +628,7 @@ export const COURSES: Course[] = [
     tuitionGhs: 1200,
     admissionGhs: 200,
     totalGhs: 1400,
+    startDate: "2026-08-01",
     modes: ["Online Live Classes (Google Meet)"],
     outcomes: [
       "HTML Structure & Semantic Tags",
@@ -648,24 +650,25 @@ export const COURSES: Course[] = [
     syllabus: [
       {
         num: "01",
-        title: "Month 1: HTML, CSS & Responsive Layouts",
+        title: "Month 1: HTML, CSS & Responsive Design",
         details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
         sessions: [
           { title: "HTML structure, elements, and semantic tags", preview: true, type: "video" },
-          { title: "CSS selectors, color systems, and text styling", preview: true, type: "video" },
-          { title: "Responsive layouts with Flexbox and Media Queries", preview: false, type: "lock" },
-          { title: "Git workflows and deploying to GitHub Pages", preview: false, type: "lock" }
+          { title: "Forms, links, and media elements", preview: true, type: "video" },
+          { title: "CSS selectors, box model & Flexbox layouts", preview: false, type: "lock" },
+          { title: "Responsive design & simple page cloning", preview: false, type: "lock" },
+          { title: "Git basics & deploying with GitHub Pages", preview: false, type: "lock" }
         ]
       },
       {
         num: "02",
-        title: "Month 2: JavaScript Logic & DOM Interactive Web",
+        title: "Month 2: JavaScript & Interactive Web Apps",
         details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
         sessions: [
-          { title: "JS variables, conditionals, and loops", preview: false, type: "lock" },
-          { title: "Arrays, objects, functions and scopes", preview: false, type: "lock" },
-          { title: "Selecting DOM nodes and event listeners", preview: false, type: "lock" },
-          { title: "Building and launching your Capstone Mini Project", preview: false, type: "lock" }
+          { title: "Variables, conditionals, loops, functions, and arrays", preview: false, type: "lock" },
+          { title: "DOM manipulation and Event Listeners", preview: false, type: "lock" },
+          { title: "Form validation & debugging with Chrome DevTools", preview: false, type: "lock" },
+          { title: "Capstone: To-Do App / Quiz App / Simple Dashboard", preview: false, type: "lock" }
         ]
       }
     ],

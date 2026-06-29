@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 
 const menuItems = [
@@ -37,6 +39,25 @@ const TOTAL_SLIDES = 42;
 export default function LessonSlidesPage() {
   const [currentSlide, setCurrentSlide] = useState(14);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [studentName, setStudentName] = useState("Student");
+  const [studentEmail, setStudentEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setStudentName(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Student");
+        setStudentEmail(user.email || "");
+        setLoading(false);
+      } else {
+        router.push(`/auth/login?next=${encodeURIComponent("/lesson/slides")}`);
+      }
+    };
+    loadUser();
+  }, [router]);
 
   const goNext = useCallback(() => {
     setCurrentSlide((s) => Math.min(s + 1, TOTAL_SLIDES));
@@ -56,6 +77,14 @@ export default function LessonSlidesPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [goNext, goPrev]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      </div>
+    );
+  }
 
   const progressPercent = Math.round((currentSlide / TOTAL_SLIDES) * 100);
 
@@ -114,7 +143,7 @@ export default function LessonSlidesPage() {
               <div className="grid grid-cols-4 gap-40 rotate-12 transform scale-150 select-none">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <span key={i} className="text-on-surface-variant font-bold text-xs whitespace-nowrap opacity-20">
-                    John Doe - john@example.com
+                    {studentName} - {studentEmail}
                   </span>
                 ))}
               </div>

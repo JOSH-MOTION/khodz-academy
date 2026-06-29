@@ -139,6 +139,18 @@ function LoginContent() {
   const [regLoading, setRegLoading] = useState(false);
   const [regSuccess, setRegSuccess] = useState(false);
 
+  /* Redirect if already authenticated */
+  useEffect(() => {
+    const checkUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        router.push(nextUrl);
+      }
+    };
+    checkUser();
+  }, [router, nextUrl]);
+
   /* Parallax tilt */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -209,11 +221,22 @@ function LoginContent() {
       email: regEmail,
       password: regPassword,
       options: { data: { full_name: regName, phone: regPhone } },
-    }).then(({ error }) => {
-      setRegLoading(false);
+    }).then(async ({ data, error }) => {
       if (error) {
+        setRegLoading(false);
         setRegErrors({ email: error.message });
       } else {
+        // Send welcoming email via welcome API
+        try {
+          await fetch("/api/auth/welcome", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: regEmail, name: regName }),
+          });
+        } catch (mailErr) {
+          console.error("Failed to send welcome email:", mailErr);
+        }
+        setRegLoading(false);
         setRegSuccess(true);
         setTimeout(() => router.push(nextUrl), 800);
       }

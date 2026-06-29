@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppSidebar from "@/components/AppSidebar";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +13,32 @@ interface UserProfile {
 export default function StudentDashboardPage() {
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [enrolment, setEnrolment] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  // Live ticking clock
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }) +
+          " · " +
+          now.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })
+      );
+    };
+    updateClock();
+    const interval = setInterval(updateClock, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Chart bar load animation helper
   const [animateChart, setAnimateChart] = useState(false);
@@ -23,6 +50,8 @@ export default function StudentDashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>("https://lh3.googleusercontent.com/aida-public/AB6AXuCXcZ0Y-k35tsaUPewSwh8RfmTddpo7nlyD1GZOHEi8WUuXSF5HqmklT4tkJieXXVFTmHt9AIizG5_biJQzl0MZ1kR693G50tC_qXtsLwd8bvnIHodQ32ccNCgtYIuGAjJbUapSEC3oLybUKIyXYey_SEcXm159Wl-2xEs5NUoDd1cZgdxNozNwmM-DPLNTwqwOqLCp3Msok09iItHHxPIa6V5JHhOwtAR0EZ3a182zZGP-yMNwWfbCbXyL6Zk4vzW_i4OgY_oDl7s");
   const [displayName, setDisplayName] = useState<string>("Student");
+
+  const router = useRouter();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -42,10 +71,22 @@ export default function StudentDashboardPage() {
         if (profileData) {
           setProfile(profileData as UserProfile);
         }
+
+        // Fetch enrolment details
+        const { data: enrolmentData } = await supabase
+          .from("enrolments")
+          .select("*, courses(title)")
+          .eq("student_id", user.id)
+          .single();
+        if (enrolmentData) {
+          setEnrolment(enrolmentData);
+        }
+      } else {
+        router.push(`/auth/login?next=${encodeURIComponent("/student-dashboard")}`);
       }
     };
     loadUser();
-  }, []);
+  }, [router]);
 
   const chartData = [
     { day: 1, height: "20%", active: false, tooltip: "" },
@@ -62,6 +103,17 @@ export default function StudentDashboardPage() {
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
+      {/* Dynamic Payment Due Scrolling Marquee */}
+      {enrolment && enrolment.tier !== 'paid' && enrolment.payment_deadline && (
+        <div className="bg-red-950/40 border-b border-red-500/20 py-2.5 overflow-hidden text-xs text-red-400 font-bold z-[100] relative flex">
+          <div className="animate-marquee whitespace-nowrap flex gap-8">
+            <span>⚠️ ATTENTION REMINDER: Your remaining tuition balance is due by {new Date(enrolment.payment_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Please proceed to the payment tab to complete your enrolment.</span>
+            <span>⚠️ ATTENTION REMINDER: Your remaining tuition balance is due by {new Date(enrolment.payment_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Please proceed to the payment tab to complete your enrolment.</span>
+            <span>⚠️ ATTENTION REMINDER: Your remaining tuition balance is due by {new Date(enrolment.payment_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Please proceed to the payment tab to complete your enrolment.</span>
+          </div>
+        </div>
+      )}
+
       {/* Network water warning */}
       {!warningDismissed && (
         <div className="bg-amber-500/10 border-b border-amber-500/20 px-gutter py-2 flex items-center justify-between text-xs text-amber-400 font-bold z-[100] px-6">
@@ -86,7 +138,15 @@ export default function StudentDashboardPage() {
               <h2 className="font-syne text-headline-md text-on-surface leading-none text-xl font-bold">
                 Welcome back, {displayName.split(" ")[0]}
               </h2>
-              <p className="font-body-sm text-xs text-on-surface-variant mt-1">Let&apos;s continue your mastery journey.</p>
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-on-surface-variant">
+                <span>Let&apos;s continue your mastery journey.</span>
+                {currentTime && (
+                  <>
+                    <span className="text-white/10">•</span>
+                    <span className="font-mono text-primary font-semibold">{currentTime}</span>
+                  </>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-stack-md gap-4">

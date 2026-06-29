@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 
 const menuItems = [
@@ -55,6 +57,23 @@ export default function VideoLessonPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(33);
   const progressRef = useRef<HTMLDivElement>(null);
+  const [studentEmail, setStudentEmail] = useState("");
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setStudentEmail(user.email || "");
+        setLoading(false);
+      } else {
+        router.push(`/auth/login?next=${encodeURIComponent("/lesson/video")}`);
+      }
+    };
+    loadUser();
+  }, [router]);
 
   // Simulate play effect
   useEffect(() => {
@@ -64,6 +83,14 @@ export default function VideoLessonPage() {
     }, 500);
     return () => clearInterval(id);
   }, [isPlaying]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
@@ -108,7 +135,7 @@ export default function VideoLessonPage() {
                 <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 pointer-events-none opacity-[0.03] select-none">
                   {Array.from({ length: 16 }).map((_, i) => (
                     <div key={i} className="flex items-center justify-center font-bold text-sm text-on-surface -rotate-45 whitespace-nowrap">
-                      USER_ID_8842_KHODZ
+                      {studentEmail}
                     </div>
                   ))}
                 </div>

@@ -7,18 +7,23 @@ import { createClient } from "@/lib/supabase/client";
 import { COURSES_MAP } from "@/lib/courses-data";
 
 // Dynamically generate payment details for any course from the shared library
-function getCoursePaymentInfo(courseId: string) {
+function getCoursePaymentInfo(courseId: string, option: "admission" | "full") {
   const course = COURSES_MAP[courseId] || COURSES_MAP["beginner-web-design"];
-  const admission = course.admissionGhs;
-  
-  let platformFee = 50;
-  if (admission === 250) platformFee = 25;
-  else if (admission === 200) platformFee = 20;
-  else if (admission === 100) platformFee = 15;
-  
-  const netPrice = admission - platformFee;
   const isBootcamp = course.id === "beginner-web-design";
   const isVacation = course.id.includes("vacation");
+
+  let baseAmount = option === "admission" ? course.admissionGhs : (course.admissionGhs + course.tuitionGhs);
+  
+  let platformFee = 50;
+  if (option === "admission") {
+    if (course.admissionGhs === 250) platformFee = 25;
+    else if (course.admissionGhs === 200) platformFee = 20;
+    else if (course.admissionGhs === 100) platformFee = 15;
+  } else {
+    platformFee = 100; // Flat platform fee for full tuition
+  }
+  
+  const netPrice = baseAmount - platformFee;
 
   return {
     id: course.id,
@@ -27,11 +32,14 @@ function getCoursePaymentInfo(courseId: string) {
       ? "Phase 1 - Introductory Bootcamp" 
       : isVacation 
         ? "Vacation Program - Cohort 01" 
-        : "Cohort 04 - Admission Fee",
+        : "Cohort 04",
     price: `GHS ${netPrice.toFixed(2)}`,
     fee: `GHS ${platformFee.toFixed(2)}`,
-    total: `GHS ${admission.toFixed(2)}`,
+    total: `GHS ${baseAmount.toFixed(2)}`,
     feeLabel: (isBootcamp || isVacation) ? "Registration processing fee" : "Platform access fee",
+    admissionGhs: course.admissionGhs,
+    tuitionGhs: course.tuitionGhs,
+    totalGhs: course.admissionGhs + course.tuitionGhs,
   };
 }
 
@@ -41,7 +49,9 @@ function AdmissionPaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = searchParams.get("course") || "beginner-web-design";
-  const courseInfo = getCoursePaymentInfo(courseId);
+  
+  const [paymentOption, setPaymentOption] = useState<"admission" | "full">("admission");
+  const courseInfo = getCoursePaymentInfo(courseId, paymentOption);
 
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -60,7 +70,7 @@ function AdmissionPaymentContent() {
           phone: user.user_metadata?.phone || "",
         });
       } else {
-        // Not logged in — redirect to login with next param
+        // Redirect to login with next param
         router.push(`/auth/login?next=${encodeURIComponent(`/payment/admission?course=${courseId}`)}`);
       }
       setLoadingUser(false);
@@ -79,6 +89,7 @@ function AdmissionPaymentContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId,
+          paymentType: paymentOption === "admission" ? "admission" : "full",
           name: formData.name,
           phone: formData.phone,
         }),
@@ -95,9 +106,12 @@ function AdmissionPaymentContent() {
         throw new Error(data.error || "Payment processing failed.");
       }
 
-      // Simulate Paystack popup (replace with real Paystack JS SDK integration)
-      setSubmitState("success");
-      setTimeout(() => router.push("/student-dashboard"), 2500);
+      if (data.authorizationUrl) {
+        setSubmitState("success");
+        window.location.href = data.authorizationUrl;
+      } else {
+        throw new Error("Payment gateway did not return checkout link.");
+      }
     } catch (err: unknown) {
       setSubmitState("error");
       const message = err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -149,9 +163,25 @@ function AdmissionPaymentContent() {
                   <h3 className="font-syne text-base font-bold">{courseInfo.name}</h3>
                   <p className="text-on-surface-variant text-xs mt-1">{courseInfo.cohort}</p>
                 </div>
-                <span className="font-syne text-primary font-bold text-base">{courseInfo.price}</span>
               </div>
               <div className="pt-4 border-t border-white/5 space-y-2 text-xs text-on-surface-variant">
+                {paymentOption === "admission" ? (
+                  <div className="flex justify-between">
+                    <span>Admission Fee Only</span>
+                    <span className="font-bold text-white">GHS {courseInfo.admissionGhs.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span>Admission Fee</span>
+                      <span>GHS {courseInfo.admissionGhs.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tuition Fee</span>
+                      <span>GHS {courseInfo.tuitionGhs.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span>{courseInfo.feeLabel}</span>
                   <span>{courseInfo.fee}</span>
@@ -221,11 +251,7 @@ function AdmissionPaymentContent() {
                 <div className="mb-6 bg-primary/20 border border-primary/30 rounded-lg p-4 flex items-start gap-3 animate-fade-in">
                   <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                   <div>
-                    <p className="font-bold text-primary text-sm">Enrollment Confirmed! 🎉</p>
-                    <p className="text-on-surface-variant text-xs mt-1">
-                      Your spot is secured. Confirmation details will be sent to <span className="text-white font-semibold">{formData.email}</span>.
-                    </p>
-                    <p className="text-on-surface-variant text-xs mt-2">Redirecting to your dashboard…</p>
+                    <p className="font-bold text-primary text-sm">Redirecting to Paystack... 🎉</p>
                   </div>
                 </div>
               )}
@@ -242,6 +268,39 @@ function AdmissionPaymentContent() {
               )}
 
               <form onSubmit={handlePay} className="space-y-6 relative z-10">
+                
+                {/* Choice selection */}
+                <div className="space-y-3">
+                  <label className="text-white font-bold text-sm">Choose Payment Option</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div 
+                      onClick={() => setPaymentOption("admission")}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentOption === "admission" ? "border-primary bg-primary/5" : "border-white/10 hover:border-primary/50"}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-lg">payments</span>
+                        <span className="text-white font-bold text-xs">Admission Only</span>
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                        Pay GHS {courseInfo.admissionGhs.toFixed(2)} to secure admission. The remaining tuition can be paid in installments.
+                      </p>
+                    </div>
+
+                    <div 
+                      onClick={() => setPaymentOption("full")}
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${paymentOption === "full" ? "border-primary bg-primary/5" : "border-white/10 hover:border-primary/50"}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="material-symbols-outlined text-primary text-lg">local_atm</span>
+                        <span className="text-white font-bold text-xs">Full Payment</span>
+                      </div>
+                      <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                        Pay GHS {courseInfo.totalGhs.toFixed(2)} full tuition + admission at once to unlock the entire course.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <h2 className="font-syne text-lg font-bold text-white">Registrant Information</h2>
                   <p className="text-on-surface-variant text-xs">
@@ -313,11 +372,6 @@ function AdmissionPaymentContent() {
                         <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
                         Processing…
                       </>
-                    ) : submitState === "success" ? (
-                      <>
-                        <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                        Enrollment Confirmed!
-                      </>
                     ) : (
                       <>
                         <span className="material-symbols-outlined text-lg">payments</span>
@@ -335,32 +389,6 @@ function AdmissionPaymentContent() {
                   </p>
                 </div>
               </form>
-            </div>
-
-            {/* Side features */}
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="glass-panel p-4 rounded-xl flex gap-3 items-start text-xs">
-                <div className="bg-primary-container/20 p-2 rounded-lg text-primary">
-                  <span className="material-symbols-outlined text-base">mail</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white">Instant Access</h4>
-                  <p className="text-[10px] text-on-surface-variant mt-1">
-                    Confirmation and credentials will be sent to your email immediately.
-                  </p>
-                </div>
-              </div>
-              <div className="glass-panel p-4 rounded-xl flex gap-3 items-start text-xs">
-                <div className="bg-primary-container/20 p-2 rounded-lg text-primary">
-                  <span className="material-symbols-outlined text-base">support_agent</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white">Payment Help</h4>
-                  <p className="text-[10px] text-on-surface-variant mt-1">
-                    Having issues? Contact our support team via WhatsApp 24/7.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </div>
