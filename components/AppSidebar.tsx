@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import MobileBottomNav from "./MobileBottomNav";
 
 interface AppSidebarProps {
@@ -30,6 +32,27 @@ const adminMenu = [
 export default function AppSidebar({ role = "student" }: AppSidebarProps) {
   const pathname = usePathname();
   const menu = role === "admin" ? adminMenu : studentMenu;
+  const [showAdminLink, setShowAdminLink] = useState(role === "admin");
+
+  useEffect(() => {
+    const checkRole = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (profile && profile.role === "admin") {
+          setShowAdminLink(true);
+        }
+      }
+    };
+    if (role !== "admin") {
+      checkRole();
+    }
+  }, [role]);
 
   return (
     <>
@@ -81,15 +104,17 @@ export default function AppSidebar({ role = "student" }: AppSidebarProps) {
       </nav>
 
       {/* Switch role quick link */}
-      <div className="mx-4 mb-2 mt-4">
-        <Link
-          href={role === "admin" ? "/student-dashboard" : "/admin-dashboard"}
-          className="flex items-center gap-2 text-[11px] text-on-surface-variant hover:text-primary transition-colors px-2 py-2"
-        >
-          <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
-          Switch to {role === "admin" ? "Student View" : "Admin Panel"}
-        </Link>
-      </div>
+      {showAdminLink && (
+        <div className="mx-4 mb-2 mt-4">
+          <Link
+            href={role === "admin" ? "/student-dashboard" : "/admin-dashboard"}
+            className="flex items-center gap-2 text-[11px] text-on-surface-variant hover:text-primary transition-colors px-2 py-2"
+          >
+            <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
+            Switch to {role === "admin" ? "Student View" : "Admin Panel"}
+          </Link>
+        </div>
+      )}
 
       {/* Bottom section */}
       <div className="px-4 pt-4 border-t border-white/5 space-y-0.5">

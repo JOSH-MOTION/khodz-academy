@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
 
 export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -11,6 +12,7 @@ export default function AdminDashboardPage() {
   const [newStudentEmail, setNewStudentEmail] = useState("");
   const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentTier, setNewStudentTier] = useState("Pro Developer");
+
 
   // Release lock states for modules
   const [modules, setModules] = useState([
@@ -115,7 +117,8 @@ export default function AdminDashboardPage() {
   );
 
   return (
-    <div className="bg-background text-on-background font-body-md overflow-x-hidden min-h-screen pb-16 lg:pb-0 flex">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md overflow-x-hidden min-h-screen pb-16 lg:pb-0 flex">
 
       <AppSidebar role="admin" />
 
@@ -549,5 +552,6 @@ export default function AdminDashboardPage() {
         </div>
       )}
     </div>
+    </AdminPinGuard>
   );
 }

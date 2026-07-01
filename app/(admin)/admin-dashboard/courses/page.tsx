@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
+import { createClient } from "@/lib/supabase/client";
 import { COURSES } from "@/lib/courses-data";
 
 const initialCoursesData = COURSES.map(course => ({
@@ -15,10 +17,32 @@ const initialCoursesData = COURSES.map(course => ({
   img: course.img,
 }));
 
+interface Lesson {
+  id: string;
+  title: string;
+  video_url: string | null;
+  slides_url: string | null;
+  order_in_week: number;
+}
+
+interface WeekWithLessons {
+  id: string;
+  week_number: number;
+  title: string;
+  lessons: Lesson[];
+}
+
 export default function AdminCoursesPage() {
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [courses, setCourses] = useState(initialCoursesData);
+  
+  // Modal states
+  const [selectedCourse, setSelectedCourse] = useState<{ id: string; title: string } | null>(null);
+  const [weeks, setWeeks] = useState<WeekWithLessons[]>([]);
+  const [loadingWeeks, setLoadingWeeks] = useState(false);
+  const [savingLessonId, setSavingLessonId] = useState<string | null>(null);
+  const [editUrls, setEditUrls] = useState<Record<string, { video: string; slides: string }>>({});
 
   const filtered = courses.filter((c) => {
     const matchCat = filter === "All" || c.category === filter;
@@ -38,8 +62,107 @@ export default function AdminCoursesPage() {
     );
   };
 
+  // Fetch weeks and lessons for course
+  const openMaterialsModal = async (courseId: string, courseTitle: string) => {
+    setSelectedCourse({ id: courseId, title: courseTitle });
+    setLoadingWeeks(true);
+    setWeeks([]);
+    
+    try {
+      const supabase = createClient();
+      
+      // Fetch weeks ordered by number
+      const { data: weeksData, error: weeksError } = await supabase
+        .from("weeks")
+        .select(`
+          id,
+          week_number,
+          title,
+          lessons (
+            id,
+            title,
+            video_url,
+            slides_url,
+            order_in_week
+          )
+        `)
+        .eq("course_id", courseId)
+        .order("week_number", { ascending: true });
+
+      if (weeksError) throw weeksError;
+
+      // Type assert and sort lessons
+      const typedWeeks = (weeksData || []).map((w: any) => {
+        const sortedLessons = (w.lessons || []).sort((a: any, b: any) => a.order_in_week - b.order_in_week);
+        return {
+          id: w.id,
+          week_number: w.week_number,
+          title: w.title,
+          lessons: sortedLessons
+        };
+      }) as WeekWithLessons[];
+
+      setWeeks(typedWeeks);
+
+      // Initialize form state
+      const initialUrls: Record<string, { video: string; slides: string }> = {};
+      typedWeeks.forEach(w => {
+        w.lessons.forEach(l => {
+          initialUrls[l.id] = {
+            video: l.video_url || "",
+            slides: l.slides_url || ""
+          };
+        });
+      });
+      setEditUrls(initialUrls);
+
+    } catch (err) {
+      console.error("Failed to load lessons:", err);
+      alert("Error loading syllabus from database. Please check your Supabase schema setup.");
+    } finally {
+      setLoadingWeeks(false);
+    }
+  };
+
+  // Save lesson URLs
+  const saveUrls = async (lessonId: string) => {
+    setSavingLessonId(lessonId);
+    try {
+      const supabase = createClient();
+      const urls = editUrls[lessonId] || { video: "", slides: "" };
+      
+      const { error } = await supabase
+        .from("lessons")
+        .update({
+          video_url: urls.video || null,
+          slides_url: urls.slides || null
+        })
+        .eq("id", lessonId);
+
+      if (error) throw error;
+      
+      // Update local weeks state
+      setWeeks(prev => prev.map(w => ({
+        ...w,
+        lessons: w.lessons.map(l => l.id === lessonId ? {
+          ...l,
+          video_url: urls.video || null,
+          slides_url: urls.slides || null
+        } : l)
+      })));
+
+      alert("Lesson materials successfully updated!");
+    } catch (err: any) {
+      console.error("Failed to update lesson:", err);
+      alert("Save failed: " + err.message);
+    } finally {
+      setSavingLessonId(null);
+    }
+  };
+
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen flex">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md min-h-screen flex">
       <AppSidebar role="admin" />
 
       <main className="flex-1 lg:ml-64 min-h-screen">
@@ -134,7 +257,7 @@ export default function AdminCoursesPage() {
                       <td className="p-4 text-center">
                         <span className="text-xs text-on-surface-variant">{course.sessions}</span>
                       </td>
-                      {/* Status toggle */}
+                      {/* Status */}
                       <td className="p-4 text-center">
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${
@@ -149,6 +272,14 @@ export default function AdminCoursesPage() {
                       {/* Actions */}
                       <td className="p-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openMaterialsModal(course.id, course.title)}
+                            className="p-1.5 hover:bg-primary/20 rounded text-primary border border-primary/20 hover:border-primary transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                            title="Manage Lesson Materials"
+                          >
+                            <span className="material-symbols-outlined text-xs">folder_open</span>
+                            Links
+                          </button>
                           <Link
                             href={`/courses/${course.id}`}
                             className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
@@ -164,12 +295,6 @@ export default function AdminCoursesPage() {
                             <span className="material-symbols-outlined text-base">
                               {course.status === "Active" ? "pause_circle" : "play_circle"}
                             </span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-error/10 rounded text-on-surface-variant hover:text-error transition-colors cursor-pointer"
-                            title="Delete"
-                          >
-                            <span className="material-symbols-outlined text-base">delete</span>
                           </button>
                         </div>
                       </td>
@@ -208,6 +333,124 @@ export default function AdminCoursesPage() {
           </div>
         </div>
       </main>
+
+      {/* Course Materials / Syllabus Links Modal */}
+      {selectedCourse && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-white/10 rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-surface-container-highest">
+              <div>
+                <h3 className="font-syne text-md font-bold text-primary">Manage Links: {selectedCourse.title}</h3>
+                <p className="text-[10px] text-on-surface-variant mt-1">
+                  Paste Google Drive view/preview links below. Make sure sharing is set to &apos;Anyone with the link can view&apos;.
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedCourse(null)}
+                className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {loadingWeeks ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3">
+                  <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
+                  <span className="text-xs text-on-surface-variant">Loading syllabus from Supabase...</span>
+                </div>
+              ) : weeks.length === 0 ? (
+                <div className="py-12 text-center text-on-surface-variant text-xs">
+                  <span className="material-symbols-outlined text-3xl block mb-2 opacity-30">info</span>
+                  No weeks or lessons defined for this course in database yet.
+                </div>
+              ) : (
+                weeks.map((week) => (
+                  <div key={week.id} className="border border-white/5 bg-background/25 rounded-lg p-4 space-y-4">
+                    <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider">
+                      Week {week.week_number}: {week.title || `Module ${week.week_number}`}
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      {week.lessons.map((lesson) => (
+                        <div key={lesson.id} className="bg-surface-container-low p-4 rounded-lg border border-white/5 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-bold text-white">{lesson.title}</span>
+                            <button
+                              onClick={() => saveUrls(lesson.id)}
+                              disabled={savingLessonId === lesson.id}
+                              className="bg-primary/20 text-primary border border-primary/30 hover:bg-primary hover:text-black font-bold text-[10px] px-3 py-1 rounded transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {savingLessonId === lesson.id ? "Saving..." : "Save Links"}
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Video input */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-on-surface-variant font-bold uppercase">Google Drive Video URL</label>
+                              <div className="flex items-center bg-background border border-white/10 rounded px-2.5 py-1.5 focus-within:border-primary">
+                                <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2">play_circle</span>
+                                <input
+                                  type="text"
+                                  value={editUrls[lesson.id]?.video || ""}
+                                  onChange={(e) => setEditUrls({
+                                    ...editUrls,
+                                    [lesson.id]: {
+                                      ...editUrls[lesson.id],
+                                      video: e.target.value
+                                    }
+                                  })}
+                                  placeholder="https://drive.google.com/file/d/.../preview"
+                                  className="bg-transparent border-none text-xs w-full text-on-surface outline-none focus:ring-0"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Slides input */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-on-surface-variant font-bold uppercase">Google Drive Slides/PDF URL</label>
+                              <div className="flex items-center bg-background border border-white/10 rounded px-2.5 py-1.5 focus-within:border-primary">
+                                <span className="material-symbols-outlined text-on-surface-variant text-sm mr-2">description</span>
+                                <input
+                                  type="text"
+                                  value={editUrls[lesson.id]?.slides || ""}
+                                  onChange={(e) => setEditUrls({
+                                    ...editUrls,
+                                    [lesson.id]: {
+                                      ...editUrls[lesson.id],
+                                      slides: e.target.value
+                                    }
+                                  })}
+                                  placeholder="https://drive.google.com/file/d/.../preview"
+                                  className="bg-transparent border-none text-xs w-full text-on-surface outline-none focus:ring-0"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-surface-container-highest border-t border-white/10 flex justify-end">
+              <button
+                onClick={() => setSelectedCourse(null)}
+                className="bg-white/10 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-white/20 transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </AdminPinGuard>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
 
 export default function AdminSettingsPage() {
   const [formData, setFormData] = useState({
@@ -34,8 +35,9 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden flex flex-col pb-16 md:pb-0">
-      <div className="flex flex-grow">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden flex flex-col pb-16 md:pb-0">
+        <div className="flex flex-grow">
         <AppSidebar role="admin" />
 
         {/* Main Content Area */}
@@ -174,5 +176,6 @@ export default function AdminSettingsPage() {
         </main>
       </div>
     </div>
+    </AdminPinGuard>
   );
 }

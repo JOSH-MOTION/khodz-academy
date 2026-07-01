@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
 
 const weeks = [
   {
@@ -29,6 +30,7 @@ export default function AdminSlidesPage() {
   const [currentSlide, setCurrentSlide] = useState(14);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+
   const goNext = useCallback(() => {
     setCurrentSlide((s) => Math.min(s + 1, TOTAL_SLIDES));
   }, []);
@@ -51,7 +53,8 @@ export default function AdminSlidesPage() {
   const progressPercent = Math.round((currentSlide / TOTAL_SLIDES) * 100);
 
   return (
-    <div className="bg-background text-on-background font-body-md overflow-hidden min-h-screen flex">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md overflow-hidden min-h-screen flex">
       <AppSidebar role="admin" />
 
       {/* Main Content Canvas */}
@@ -216,5 +219,6 @@ export default function AdminSlidesPage() {
         </div>
       </main>
     </div>
+    </AdminPinGuard>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
 
 interface Lesson {
   title: string;
@@ -39,6 +40,7 @@ export default function AdminVideoPage() {
   const [progress, setProgress] = useState(33);
   const progressRef = useRef<HTMLDivElement>(null);
 
+
   // Simulate play effect
   useEffect(() => {
     if (!isPlaying) return;
@@ -49,7 +51,8 @@ export default function AdminVideoPage() {
   }, [isPlaying]);
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
       <AppSidebar role="admin" />
 
       {/* Main Content */}
@@ -213,5 +216,6 @@ export default function AdminVideoPage() {
         </div>
       </main>
     </div>
+    </AdminPinGuard>
   );
 }

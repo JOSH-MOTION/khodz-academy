@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
+import AdminPinGuard from "@/components/AdminPinGuard";
 
 type Status = "Active" | "Inactive" | "Pending";
 
@@ -39,6 +40,7 @@ export default function AdminStudentsPage() {
   const [statusFilter, setStatusFilter] = useState<"All" | Status>("All");
   const [cohortFilter, setCohortFilter] = useState("All");
 
+
   const cohorts = ["All", ...Array.from(new Set(studentsData.map((s) => s.cohort)))];
 
   const filtered = studentsData.filter((s) => {
@@ -58,7 +60,8 @@ export default function AdminStudentsPage() {
   ];
 
   return (
-    <div className="bg-background text-on-background font-body-md min-h-screen flex">
+    <AdminPinGuard>
+      <div className="bg-background text-on-background font-body-md min-h-screen flex">
       <AppSidebar role="admin" />
 
       <main className="flex-1 lg:ml-64 min-h-screen">
@@ -243,5 +246,6 @@ export default function AdminStudentsPage() {
         </div>
       </main>
     </div>
+    </AdminPinGuard>
   );
 }
