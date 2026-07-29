@@ -624,24 +624,27 @@ export const COURSES: Course[] = [
     id: "vacation-web-foundations",
     title: "Web Foundations (Vacation Coding Program)",
     category: "Beginner",
-    duration: "2 Months",
+    duration: "1 Month",
     tuitionGhs: 1200,
     admissionGhs: 200,
     totalGhs: 1400,
     startDate: "2026-08-01",
     modes: ["Online Live Classes (Google Meet)"],
     outcomes: [
-      "HTML Structure & Semantic Tags",
-      "CSS Styling & Responsive Design",
-      "Git & GitHub basics",
-      "JavaScript Fundamentals",
-      "DOM Manipulation & Event Listeners",
-      "Hosting & publishing websites"
+      "How the web works (client, server, HTTP, DNS)",
+      "Semantic, accessible HTML5",
+      "Responsive layout & styling with Tailwind CSS",
+      "Reusable UI components (navbars, cards, forms, modals)",
+      "JavaScript fundamentals & DOM manipulation",
+      "Fetching and rendering data from REST APIs",
+      "Git, GitHub, and deploying to Vercel"
     ],
     projects: [
-      "Personal Portfolio Website",
-      "Responsive Business Landing Page",
-      "Interactive Web Game / Mini Project"
+      "Personal Profile Website",
+      "Business & SaaS Landing Pages",
+      "Interactive Quiz Application",
+      "Weather / Movie Search / Country Explorer App",
+      "Final deployed business website"
     ],
     prerequisites: [
       "No programming experience required",
@@ -650,32 +653,31 @@ export const COURSES: Course[] = [
     syllabus: [
       {
         num: "01",
-        title: "Month 1: HTML, CSS & Responsive Design",
-        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        title: "Weeks 1–2: HTML, Tailwind CSS & Components",
+        details: "4 Sessions • ~2.5 hours/session",
         sessions: [
-          { title: "HTML structure, elements, and semantic tags", preview: true, type: "video" },
-          { title: "Forms, links, and media elements", preview: true, type: "video" },
-          { title: "CSS selectors, box model & Flexbox layouts", preview: false, type: "lock" },
-          { title: "Responsive design & simple page cloning", preview: false, type: "lock" },
-          { title: "Git basics & deploying with GitHub Pages", preview: false, type: "lock" }
+          { title: "Introduction to Web Development + HTML Fundamentals", preview: true, type: "video" },
+          { title: "Tailwind CSS + Modern Website Styling", preview: true, type: "video" },
+          { title: "Responsive Websites and Components", preview: false, type: "lock" },
+          { title: "Forms and User Interfaces", preview: false, type: "lock" }
         ]
       },
       {
         num: "02",
-        title: "Month 2: JavaScript & Interactive Web Apps",
-        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        title: "Weeks 3–4: JavaScript, APIs & Deployment",
+        details: "4 Sessions • ~2.5 hours/session",
         sessions: [
-          { title: "Variables, conditionals, loops, functions, and arrays", preview: false, type: "lock" },
-          { title: "DOM manipulation and Event Listeners", preview: false, type: "lock" },
-          { title: "Form validation & debugging with Chrome DevTools", preview: false, type: "lock" },
-          { title: "Capstone: To-Do App / Quiz App / Simple Dashboard", preview: false, type: "lock" }
+          { title: "JavaScript Fundamentals", preview: false, type: "lock" },
+          { title: "JavaScript in the Browser", preview: false, type: "lock" },
+          { title: "Working With APIs", preview: false, type: "lock" },
+          { title: "Professional Workflow + Final Project", preview: false, type: "lock" }
         ]
       }
     ],
     img: "https://images.unsplash.com/photo-1547082299-de196ea013d6?auto=format&fit=crop&w=600&q=80",
     level: "Beginner",
-    sessionsCount: "24 Sessions",
-    tagline: "A perfect program for complete beginners. Learn HTML, CSS, Responsive Design, Git, and Javascript fundamentals through live interactive sessions on Google Meet.",
+    sessionsCount: "8 Sessions",
+    tagline: "A perfect program for complete beginners. Learn HTML, Tailwind CSS, JavaScript, and REST APIs through 8 live interactive sessions on Google Meet — ready for React afterward.",
     rating: "4.8 (80 Students)",
     enrolledCount: 80
   },
