@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -21,7 +21,7 @@ interface DbWeek {
   lessons: DbLesson[];
 }
 
-export default function VideoLessonPage() {
+function VideoLessonContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeLessonId = searchParams.get("id");
@@ -366,5 +366,19 @@ export default function VideoLessonPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function VideoLessonPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+        </div>
+      }
+    >
+      <VideoLessonContent />
+    </Suspense>
   );
 }
