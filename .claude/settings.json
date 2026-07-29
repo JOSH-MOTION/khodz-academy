@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --env-file=.env scripts/slides/_set_admin_password.mjs 8adb116e-97b9-4418-8668-5d7d1eedbf7c)",
+      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=vacation-web-foundations --contentSlug=frontend-development)",
+      "Bash(node --env-file=.env scripts/slides/_list_courses.mjs)",
+      "Bash(rm -f scripts/slides/_list_courses.mjs)",
+      "Bash(node --env-file=.env scripts/slides/_seed_course.mjs)",
+      "Bash(rm -f \"c:/Users/Khodz/Desktop/khodz-academy/scripts/slides/_seed_course.mjs\")"
+    ]
+  }
+}
