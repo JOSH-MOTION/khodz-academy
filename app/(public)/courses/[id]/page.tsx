@@ -19,17 +19,30 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "curriculum" | "instructor">("overview");
   const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isEnrolledInThisCourse, setIsEnrolledInThisCourse] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       setIsLoggedIn(!!user);
+      if (!user) return;
+      const { data } = await supabase
+        .from("enrolments")
+        .select("id")
+        .eq("student_id", user.id)
+        .eq("course_id", courseId)
+        .maybeSingle();
+      setIsEnrolledInThisCourse(!!data);
     };
     checkAuth();
-  }, []);
+  }, [courseId]);
 
   const handleApply = () => {
+    if (isEnrolledInThisCourse) {
+      router.push("/student-dashboard");
+      return;
+    }
     const paymentUrl = `/payment/admission?course=${courseId}`;
     if (isLoggedIn) {
       router.push(paymentUrl);
@@ -226,9 +239,16 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
               <div className="sticky top-32 space-y-stack-md space-y-4">
                 <div className="glass-card p-stack-lg p-6 rounded-xl overflow-hidden relative">
                   <div className="absolute top-0 right-0 p-4">
-                    <span className="bg-primary text-background text-[10px] font-bold px-2 py-1 rounded-full animate-pulse text-black">
-                      LIVE SOON
-                    </span>
+                    {isEnrolledInThisCourse ? (
+                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full border border-primary/40 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        Already Enrolled
+                      </span>
+                    ) : (
+                      <span className="bg-primary text-background text-[10px] font-bold px-2 py-1 rounded-full animate-pulse text-black">
+                        LIVE SOON
+                      </span>
+                    )}
                   </div>
                   <div className="relative w-full aspect-video rounded-lg overflow-hidden mb-stack-lg border border-white/10 mb-4">
                     <img
@@ -284,7 +304,7 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
                       onClick={handleApply}
                       className="w-full bg-primary text-background font-bold py-3 rounded-lg hover:shadow-[0_0_20px_rgba(69,236,157,0.3)] transition-all active:scale-95 text-center text-xs text-black font-semibold cursor-pointer"
                     >
-                      Apply Now
+                      {isEnrolledInThisCourse ? "Continue Learning →" : "Apply Now"}
                     </button>
                     <button className="w-full border border-white/20 text-on-surface font-bold py-3 rounded-lg hover:bg-white/5 transition-all text-xs cursor-pointer">
                       Download Syllabus

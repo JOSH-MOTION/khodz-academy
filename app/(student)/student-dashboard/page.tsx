@@ -1,20 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
+import CourseSwitcher from "@/components/CourseSwitcher";
 import { createClient } from "@/lib/supabase/client";
+import { COURSES } from "@/lib/courses-data";
 
 interface UserProfile {
   role?: string;
 }
 
-export default function StudentDashboardPage() {
-  const [warningDismissed, setWarningDismissed] = useState(false);
+interface Enrolment {
+  course_id: string;
+  tier: string;
+  cohort: string | null;
+  waterline_week: number;
+  payment_deadline: string | null;
+  created_at: string;
+  courses?: { title: string };
+}
+
+const TIER_LABEL: Record<string, string> = {
+  admitted: "Admitted",
+  deposited: "Deposited",
+  paid: "Fully Paid",
+};
+
+const TIER_COLOR: Record<string, string> = {
+  admitted: "bg-white/10 text-on-surface-variant border-white/10",
+  deposited: "bg-tertiary/20 text-tertiary border-tertiary/30",
+  paid: "bg-primary/20 text-primary border-primary/30",
+};
+
+function StudentDashboardContent() {
+  const searchParams = useSearchParams();
+  const requestedCourseId = searchParams.get("course");
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [enrolment, setEnrolment] = useState<any>(null);
+  const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
+  const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [currentTime, setCurrentTime] = useState<string>("");
 
   // Live ticking clock
@@ -39,13 +66,6 @@ export default function StudentDashboardPage() {
     updateClock();
     const interval = setInterval(updateClock, 1000);
     return () => clearInterval(interval);
-  }, []);
-
-  // Chart bar load animation helper
-  const [animateChart, setAnimateChart] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setAnimateChart(true), 100);
-    return () => clearTimeout(timer);
   }, []);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -73,34 +93,32 @@ export default function StudentDashboardPage() {
           setProfile(profileData as UserProfile);
         }
 
-        // Fetch enrolment details
-        const { data: enrolmentData } = await supabase
+        // Fetch all enrolments — a student can be enrolled in more than one course
+        const { data: allEnrolments } = await supabase
           .from("enrolments")
           .select("*, courses(title)")
-          .eq("student_id", user.id)
-          .single();
-        if (enrolmentData) {
-          setEnrolment(enrolmentData);
+          .eq("student_id", user.id);
+        if (allEnrolments && allEnrolments.length > 0) {
+          setEnrolments(allEnrolments);
+          setEnrolment(allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0]);
         }
       } else {
         router.push(`/auth/login?next=${encodeURIComponent("/student-dashboard")}`);
       }
     };
     loadUser();
-  }, [router]);
+  }, [router, requestedCourseId]);
 
-  const chartData = [
-    { day: 1, height: "20%", active: false, tooltip: "" },
-    { day: 2, height: "35%", active: false, tooltip: "" },
-    { day: 3, height: "25%", active: false, tooltip: "" },
-    { day: 4, height: "45%", active: false, tooltip: "" },
-    { day: 5, height: "70%", active: true, tooltip: "4.2 hrs Today" },
-    { day: 6, height: "40%", active: false, tooltip: "" },
-    { day: 7, height: "15%", active: false, tooltip: "" },
-    { day: 8, height: "60%", active: false, tooltip: "" },
-    { day: 9, height: "30%", active: false, tooltip: "" },
-    { day: 10, height: "50%", active: false, tooltip: "" },
-  ];
+  const handleSwitchCourse = (courseId: string) => {
+    router.push(`/student-dashboard?course=${courseId}`);
+  };
+
+  const enrolledCourseIds = new Set(enrolments.map((e) => e.course_id));
+  const exploreCourses = COURSES.filter((c) => c.active && !enrolledCourseIds.has(c.id));
+
+  const query = searchQuery.trim().toLowerCase();
+  const visibleEnrolments = enrolments.filter((e) => !query || (e.courses?.title || e.course_id).toLowerCase().includes(query));
+  const visibleExploreCourses = exploreCourses.filter((c) => !query || c.title.toLowerCase().includes(query));
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden flex flex-col">
@@ -112,19 +130,6 @@ export default function StudentDashboardPage() {
             <span>⚠️ ATTENTION REMINDER: Your remaining tuition balance is due by {new Date(enrolment.payment_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Please proceed to the payment tab to complete your enrolment.</span>
             <span>⚠️ ATTENTION REMINDER: Your remaining tuition balance is due by {new Date(enrolment.payment_deadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Please proceed to the payment tab to complete your enrolment.</span>
           </div>
-        </div>
-      )}
-
-      {/* Network water warning */}
-      {!warningDismissed && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-gutter py-2 flex items-center justify-between text-xs text-amber-400 font-bold z-[100] px-6">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">warning</span>
-            <span>SIMULATED SANDBOX ACCESS — REALTIME SYNC DISABLED</span>
-          </div>
-          <button onClick={() => setWarningDismissed(true)} className="material-symbols-outlined text-sm opacity-60 hover:opacity-100 cursor-pointer">
-            close
-          </button>
         </div>
       )}
 
@@ -156,7 +161,7 @@ export default function StudentDashboardPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-surface-container-low border border-white/10 rounded-full pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary transition-all w-64 outline-none"
-                  placeholder="Search lessons..."
+                  placeholder="Search courses..."
                   type="text"
                 />
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
@@ -164,8 +169,10 @@ export default function StudentDashboardPage() {
                 </span>
               </div>
               
+              <CourseSwitcher enrolments={enrolments} activeCourseId={enrolment?.course_id || ""} onSwitch={handleSwitchCourse} />
+
               <NotificationBell />
-              
+
               <div className="flex items-center gap-3 pl-4 border-l border-white/10">
                 <div className="text-right hidden sm:block">
                   <p className="font-label-md text-sm text-on-surface font-semibold">{displayName}</p>
@@ -183,199 +190,92 @@ export default function StudentDashboardPage() {
           </header>
 
           <div className="p-gutter max-w-container-max mx-auto space-y-stack-lg p-6 space-y-6 max-w-[1280px]">
-            {/* Dashboard Bento Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-stack-lg gap-6">
-              
-              {/* Progress Chart Section */}
-              <div className="md:col-span-8 glass-card rounded-xl p-stack-lg p-6 inner-glow">
-                <div className="flex justify-between items-end mb-stack-lg mb-6">
-                  <div>
-                    <h3 className="font-syne text-headline-md text-on-surface text-lg font-semibold">
-                      Learning Performance
-                    </h3>
-                    <p className="font-body-sm text-xs text-on-surface-variant">Your activity over the last 14 days</p>
-                  </div>
-                  <div>
-                    <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] font-bold">
-                      +12% vs last week
-                    </span>
-                  </div>
+            {/* Your Courses */}
+            <section>
+              <h3 className="font-syne text-headline-md text-on-surface mb-stack-md mb-4 text-lg font-semibold">
+                Your Courses
+              </h3>
+
+              {enrolments.length === 0 ? (
+                <div className="glass-card rounded-xl p-stack-lg p-10 inner-glow text-center">
+                  <span className="material-symbols-outlined text-4xl text-on-surface-variant opacity-40 mb-3 block">school</span>
+                  <p className="text-sm font-bold text-on-surface mb-1">You&apos;re not enrolled in any course yet</p>
+                  <p className="text-xs text-on-surface-variant mb-4">Browse our programmes and start your journey today.</p>
+                  <Link href="/courses" className="inline-block bg-primary text-black font-bold py-2.5 px-6 rounded-lg text-xs hover:brightness-110 transition-all">
+                    Browse Courses
+                  </Link>
                 </div>
-                
-                {/* Chart Visualization */}
-                <div className="h-64 flex items-end justify-between gap-2 px-4">
-                  {chartData.map((bar, i) => (
-                    <div
-                      key={i}
-                      style={{ height: animateChart ? bar.height : "0%" }}
-                      className={`w-full rounded-t-sm transition-all duration-1000 ${
-                        bar.active ? "bg-primary" : "bg-surface-container-high hover:bg-primary"
-                      } relative group cursor-pointer`}
-                    >
-                      {bar.tooltip && (
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-on-surface text-surface py-1 px-2 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white text-black">
-                          {bar.tooltip}
-                        </div>
-                      )}
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md gap-4">
+                  {visibleEnrolments.map((e) => (
+                    <div key={e.course_id} className="glass-card rounded-xl p-stack-lg p-6 inner-glow flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h4 className="font-syne text-headline-md text-on-surface text-base font-bold leading-tight">
+                          {e.courses?.title || e.course_id}
+                        </h4>
+                        <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border shrink-0 ${TIER_COLOR[e.tier] || TIER_COLOR.admitted}`}>
+                          {TIER_LABEL[e.tier] || e.tier}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-[10px] text-on-surface-variant">
+                        {e.cohort && (
+                          <span className="border border-white/10 px-2 py-0.5 rounded-full">{e.cohort}</span>
+                        )}
+                        <span className="border border-white/10 px-2 py-0.5 rounded-full">
+                          Enrolled {new Date(e.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                        {e.tier !== "paid" && e.payment_deadline && (
+                          <span className="border border-amber-500/30 text-amber-400 px-2 py-0.5 rounded-full">
+                            Balance due {new Date(e.payment_deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 mt-2">
+                        <Link
+                          href={`/lesson/video?course=${e.course_id}`}
+                          className="flex-1 flex items-center justify-center gap-2 bg-primary text-black font-bold py-2.5 rounded-lg text-xs hover:brightness-110 transition-all"
+                        >
+                          <span className="material-symbols-outlined text-base">play_circle</span> Watch Videos
+                        </Link>
+                        <Link
+                          href={`/lesson/slides?course=${e.course_id}`}
+                          className="flex-1 flex items-center justify-center gap-2 bg-surface-container-high border border-white/10 text-on-surface font-bold py-2.5 rounded-lg text-xs hover:bg-surface-variant transition-all"
+                        >
+                          <span className="material-symbols-outlined text-base">present_to_all</span> View Slides
+                        </Link>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Stats Quick Look */}
-              <div className="md:col-span-4 flex flex-col gap-stack-md gap-4">
-                <div className="glass-card rounded-xl p-stack-md p-6 inner-glow flex items-center gap-stack-md gap-4 grow">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary text-2xl font-bold">
-                    <span className="material-symbols-outlined">verified</span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
-                      Total Progress
-                    </p>
-                    <p className="text-3xl font-syne text-primary font-bold leading-tight">68%</p>
-                  </div>
-                </div>
-                
-                <div className="glass-card rounded-xl p-stack-md p-6 inner-glow flex items-center gap-stack-md gap-4 grow">
-                  <div className="w-12 h-12 bg-tertiary/10 rounded-lg flex items-center justify-center text-tertiary text-2xl font-bold">
-                    <span className="material-symbols-outlined">timer</span>
-                  </div>
-                  <div>
-                    <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
-                      Study Time
-                    </p>
-                    <p className="text-3xl font-syne text-tertiary font-bold leading-tight">124h</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Next Lesson Card */}
-              <div className="md:col-span-12 lg:col-span-7 relative group overflow-hidden rounded-xl h-72">
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent z-10"></div>
-                <img
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  alt="Lesson background"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqhzFpRkJuWMy7h-t_Hox6JidH0mizsCFz-iLyM67G2gaULTaTFOY3jmbetsqYlfDeVMLRHH64l9yCQCspRnnpfaz1Toc_trQE_Yp-v4tBJBg5-gDgBm1W923NiJYVPZilfXMFASOflvCMZ7qAXsnlDZafULRe2TBPu1eT3gbwCbiIXp6ukxgioNhrNQ8Cc8bAFTTWyynGw3PpxR-Eobn8A7zDDCWX_r7mNX1RboE0et01Livyceq0rVwPV_FjLSA77CtEDvzs88I"
-                />
-                <div className="absolute inset-0 z-20 p-stack-lg p-6 flex flex-col justify-end">
-                  <span className="bg-primary text-on-primary px-3 py-1 rounded-full text-xs font-bold w-fit mb-stack-sm text-black">
-                    CONTINUE LEARNING
-                  </span>
-                  <h3 className="font-syne text-display-md text-on-surface mb-stack-sm text-2xl font-bold">
-                    Advanced System Architecture
-                  </h3>
-                  <div className="flex items-center gap-stack-lg gap-6">
-                    <p className="font-body-sm text-xs text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-sm mr-1">play_circle</span> Module 4: Microservices
-                    </p>
-                    <div className="flex-1 bg-white/10 h-1 rounded-full overflow-hidden max-w-[120px]">
-                      <div className="bg-primary h-full w-[45%]"></div>
-                    </div>
-                  </div>
-                  <Link href="/lesson/video" className="mt-stack-md mt-4 bg-white text-background font-bold py-3 px-stack-lg rounded-lg w-fit hover:bg-primary hover:text-black transition-colors flex items-center gap-2 text-sm text-black cursor-pointer decoration-none">
-                    Start Session <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div className="md:col-span-12 lg:col-span-5 glass-card rounded-xl p-stack-lg p-6 inner-glow flex flex-col">
-                <div className="flex justify-between items-center mb-stack-lg mb-6">
-                  <h3 className="font-syne text-headline-md text-on-surface text-lg font-semibold">
-                    Recent Activity
-                  </h3>
-                  <button className="text-primary font-label-md text-xs hover:underline cursor-pointer">
-                    View All
-                  </button>
-                </div>
-                
-                <div className="space-y-stack-md overflow-y-auto max-h-[220px] pr-2 space-y-4">
-                  {/* Activity Item */}
-                  <div className="flex gap-stack-md gap-3 items-start p-stack-sm rounded-lg hover:bg-white/5 transition-colors p-2">
-                    <div className="mt-1 w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
-                      <span className="material-symbols-outlined text-[18px]">quiz</span>
-                    </div>
-                    <div className="flex-1 text-sm">
-                      <p className="font-body-sm text-on-surface">
-                        Passed Quiz: <span className="text-primary">Database Indexing</span>
-                      </p>
-                      <p className="text-xs text-on-surface-variant">Score: 94% • 2 hours ago</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-stack-md gap-3 items-start p-stack-sm rounded-lg hover:bg-white/5 transition-colors p-2">
-                    <div className="mt-1 w-8 h-8 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container">
-                      <span className="material-symbols-outlined text-[18px]">cloud_download</span>
-                    </div>
-                    <div className="flex-1 text-sm">
-                      <p className="font-body-sm text-on-surface">
-                        Downloaded: <span className="text-tertiary">Cloud Native PDF</span>
-                      </p>
-                      <p className="text-xs text-on-surface-variant">Resources Section • 5 hours ago</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-stack-md gap-3 items-start p-stack-sm rounded-lg hover:bg-white/5 transition-colors p-2">
-                    <div className="mt-1 w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary">
-                      <span className="material-symbols-outlined text-[18px]">comment</span>
-                    </div>
-                    <div className="flex-1 text-sm">
-                      <p className="font-body-sm text-on-surface">
-                        Reply from: <span className="text-primary">Instructor Sarah</span>
-                      </p>
-                      <p className="text-xs text-on-surface-variant">Thread: API Gateways • Yesterday</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Specialized Tracks Section */}
-            <section className="mt-stack-lg mt-8">
-              <h3 className="font-syne text-headline-md text-on-surface mb-stack-md mb-4 text-lg font-semibold">
-                Specialized Tracks
-              </h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-md gap-4">
-                <div className="glass-card p-stack-md p-6 rounded-xl glow-hover transition-all cursor-pointer text-center group">
-                  <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">
-                    code
-                  </span>
-                  <p className="font-label-md text-sm text-on-surface font-semibold">Development</p>
-                  <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">12 Modules</p>
-                </div>
-                
-                <div className="glass-card p-stack-md p-6 rounded-xl glow-hover transition-all cursor-pointer text-center group">
-                  <span className="material-symbols-outlined text-tertiary text-[32px] mb-2 group-hover:scale-110 transition-transform">
-                    palette
-                  </span>
-                  <p className="font-label-md text-sm text-on-surface font-semibold">Design</p>
-                  <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">8 Modules</p>
-                </div>
-                
-                <div className="glass-card p-stack-md p-6 rounded-xl glow-hover transition-all cursor-pointer text-center group opacity-50 relative">
-                  <div className="absolute inset-0 flex items-center justify-center z-10 backdrop-blur-[2px] bg-black/45 rounded-xl">
-                    <span className="material-symbols-outlined text-primary text-xl">lock</span>
-                  </div>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[32px] mb-2">
-                    analytics
-                  </span>
-                  <p className="font-label-md text-sm text-on-surface font-semibold">Marketing</p>
-                  <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">6 Modules</p>
-                </div>
-                
-                <div className="glass-card p-stack-md p-6 rounded-xl glow-hover transition-all cursor-pointer text-center group opacity-50 relative">
-                  <div className="absolute inset-0 flex items-center justify-center z-10 backdrop-blur-[2px] bg-black/45 rounded-xl">
-                    <span className="material-symbols-outlined text-primary text-xl">lock</span>
-                  </div>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[32px] mb-2">
-                    database
-                  </span>
-                  <p className="font-label-md text-sm text-on-surface font-semibold">DevOps</p>
-                  <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">15 Modules</p>
-                </div>
-              </div>
+              )}
             </section>
+
+            {/* Explore More Programs */}
+            {visibleExploreCourses.length > 0 && (
+              <section className="mt-stack-lg mt-8">
+                <h3 className="font-syne text-headline-md text-on-surface mb-stack-md mb-4 text-lg font-semibold">
+                  Explore More Programs
+                </h3>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-md gap-4">
+                  {visibleExploreCourses.map((c) => (
+                    <Link
+                      key={c.id}
+                      href={`/courses/${c.id}`}
+                      className="glass-card p-stack-md p-6 rounded-xl glow-hover transition-all cursor-pointer text-center group"
+                    >
+                      <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">
+                        school
+                      </span>
+                      <p className="font-label-md text-sm text-on-surface font-semibold">{c.title}</p>
+                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">GHS {c.totalGhs.toLocaleString()}</p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Footer */}
@@ -402,10 +302,28 @@ export default function StudentDashboardPage() {
       </div>
 
 
-      {/* Floating Action Button */}
-      <button className="fixed bottom-gutter right-gutter bottom-8 right-8 w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-lg shadow-primary/20 flex items-center justify-center z-[55] hover:scale-105 active:scale-95 transition-transform cursor-pointer text-white bg-brand">
+      {/* Contact support */}
+      <a
+        href="mailto:sales@khodz.academy"
+        title="Contact support"
+        className="fixed bottom-gutter right-gutter bottom-8 right-8 w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-lg shadow-primary/20 flex items-center justify-center z-[55] hover:scale-105 active:scale-95 transition-transform cursor-pointer text-white bg-brand"
+      >
         <span className="material-symbols-outlined text-[32px]">question_answer</span>
-      </button>
+      </a>
     </div>
+  );
+}
+
+export default function StudentDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+        </div>
+      }
+    >
+      <StudentDashboardContent />
+    </Suspense>
   );
 }

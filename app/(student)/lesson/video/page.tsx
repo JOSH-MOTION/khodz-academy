@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
+import CourseSwitcher from "@/components/CourseSwitcher";
 
 interface DbLesson {
   id: string;
@@ -22,16 +23,25 @@ interface DbWeek {
   lessons: DbLesson[];
 }
 
+interface Enrolment {
+  course_id: string;
+  tier: string;
+  waterline_week: number;
+  courses?: { title: string };
+}
+
 function VideoLessonContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeLessonId = searchParams.get("id");
+  const requestedCourseId = searchParams.get("course");
 
   const [loading, setLoading] = useState(true);
   const [studentEmail, setStudentEmail] = useState("");
   const [studentId, setStudentId] = useState("");
-  
-  const [enrolment, setEnrolment] = useState<any>(null);
+
+  const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
+  const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [weeks, setWeeks] = useState<DbWeek[]>([]);
   const [currentLesson, setCurrentLesson] = useState<DbLesson | null>(null);
   const [currentWeekNum, setCurrentWeekNum] = useState<number>(1);
@@ -51,19 +61,20 @@ function VideoLessonContent() {
         setStudentEmail(user.email || "");
         setStudentId(user.id);
 
-        // 1. Fetch active enrolment
-        const { data: enrolData, error: enrolError } = await supabase
+        // 1. Fetch all enrolments — a student can be enrolled in more than one course
+        const { data: allEnrolments, error: enrolError } = await supabase
           .from("enrolments")
           .select("*, courses(title)")
-          .eq("student_id", user.id)
-          .limit(1)
-          .maybeSingle();
+          .eq("student_id", user.id);
 
-        if (enrolError || !enrolData) {
+        if (enrolError || !allEnrolments || allEnrolments.length === 0) {
           // Redirect to courses if not registered
           router.push("/courses");
           return;
         }
+
+        setEnrolments(allEnrolments);
+        const enrolData = allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0];
 
         setEnrolment(enrolData);
         setCourseTitle(enrolData.courses?.title || "My Course");
@@ -139,7 +150,11 @@ function VideoLessonContent() {
     };
 
     loadData();
-  }, [router, activeLessonId]);
+  }, [router, activeLessonId, requestedCourseId]);
+
+  const handleSwitchCourse = (courseId: string) => {
+    router.push(`/lesson/video?course=${courseId}`);
+  };
 
   // Convert Google Drive sharing link to embed preview link
   const getEmbedUrl = (url: string | null) => {
@@ -182,6 +197,7 @@ function VideoLessonContent() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
+            <CourseSwitcher enrolments={enrolments} activeCourseId={enrolment?.course_id || ""} onSwitch={handleSwitchCourse} />
             <NotificationBell />
             <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-sm uppercase">
               {studentEmail.slice(0, 2)}
@@ -239,9 +255,9 @@ function VideoLessonContent() {
                 </span>
               </div>
               <div className="flex gap-3">
-                {currentLesson?.slides_url && (
+                {currentLesson && (
                   <Link
-                    href={`/lesson/slides?id=${currentLesson.id}`}
+                    href={`/lesson/slides?id=${currentLesson.id}&course=${enrolment?.course_id || ""}`}
                     className="flex items-center gap-2 bg-surface-container border border-white/10 text-on-surface px-4 py-2 rounded text-xs font-bold hover:bg-surface-variant transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-base">present_to_all</span> View Slides
@@ -311,7 +327,7 @@ function VideoLessonContent() {
                           return (
                             <Link
                               key={lesson.id}
-                              href={`/lesson/video?id=${lesson.id}`}
+                              href={`/lesson/video?id=${lesson.id}&course=${enrolment?.course_id || ""}`}
                               className={`flex items-center gap-4 p-4 transition-all border-l-2 ${
                                 isPlaying
                                   ? "border-primary bg-background/40"

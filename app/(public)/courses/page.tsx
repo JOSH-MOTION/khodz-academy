@@ -1,13 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { COURSES } from "@/lib/courses-data";
 import { CURRENT_COHORT } from "@/lib/cohorts";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CoursesPage() {
   const [filter, setFilter] = useState("All");
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const loadEnrolments = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from("enrolments").select("course_id").eq("student_id", user.id);
+      setEnrolledCourseIds(new Set((data || []).map((e) => e.course_id)));
+    };
+    loadEnrolments();
+  }, []);
 
   const filteredCourses = COURSES.filter((course) => {
     if (!course.active) return false;
@@ -51,37 +64,52 @@ export default function CoursesPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-stack-lg gap-8">
           {/* Main List */}
           <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-stack-md gap-6">
-            {filteredCourses.map((course) => (
-              <div key={course.id} className="glass-card glow-hover rounded-xl p-stack-md p-4 group transition-all duration-300 flex flex-col justify-between">
-                <div>
-                  <div className="relative h-48 mb-stack-md rounded-lg overflow-hidden mb-4">
-                    <img
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      alt={course.title}
-                      src={course.img}
-                    />
-                    <span className="absolute top-4 left-4 bg-primary text-background text-xs font-bold px-2 py-1 rounded text-black">
-                      {course.duration.toUpperCase()}
-                    </span>
+            {filteredCourses.map((course) => {
+              const isEnrolled = enrolledCourseIds.has(course.id);
+              return (
+                <div key={course.id} className="glass-card glow-hover rounded-xl p-stack-md p-4 group transition-all duration-300 flex flex-col justify-between">
+                  <div>
+                    <div className="relative h-48 mb-stack-md rounded-lg overflow-hidden mb-4">
+                      <img
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        alt={course.title}
+                        src={course.img}
+                      />
+                      <span className="absolute top-4 left-4 bg-primary text-background text-xs font-bold px-2 py-1 rounded text-black">
+                        {course.duration.toUpperCase()}
+                      </span>
+                      {isEnrolled && (
+                        <span className="absolute top-4 right-4 bg-background/90 text-primary text-[10px] font-bold px-2 py-1 rounded-full border border-primary/40 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                          Already Enrolled
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-syne text-headline-md text-white mb-2 text-xl font-semibold leading-tight">{course.title}</h3>
+                    <p className="text-on-surface-variant text-xs mb-stack-md mb-4 leading-relaxed">
+                      {course.tagline}
+                    </p>
                   </div>
-                  <h3 className="font-syne text-headline-md text-white mb-2 text-xl font-semibold leading-tight">{course.title}</h3>
-                  <p className="text-on-surface-variant text-xs mb-stack-md mb-4 leading-relaxed">
-                    {course.tagline}
-                  </p>
-                </div>
-                <div className="flex flex-col border-t border-white/5 pt-stack-md pt-4 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-on-surface-variant text-xs">{course.category} • {course.level}</span>
-                    <span className="text-primary font-bold text-sm">
-                      {course.id === "beginner-web-design" ? "GHS 100 Reg." : `GHS ${course.totalGhs.toLocaleString()}`}
-                    </span>
+                  <div className="flex flex-col border-t border-white/5 pt-stack-md pt-4 mt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-on-surface-variant text-xs">{course.category} • {course.level}</span>
+                      <span className="text-primary font-bold text-sm">
+                        {course.id === "beginner-web-design" ? "GHS 100 Reg." : `GHS ${course.totalGhs.toLocaleString()}`}
+                      </span>
+                    </div>
+                    {isEnrolled ? (
+                      <Link href="/student-dashboard" className="mt-stack-md mt-4 w-full bg-primary/10 border border-primary/30 text-primary font-bold py-2 rounded-lg transition-all text-xs text-center hover:bg-primary hover:text-black">
+                        Continue Learning
+                      </Link>
+                    ) : (
+                      <Link href={`/courses/${course.id}`} className="mt-stack-md mt-4 w-full border border-white/20 hover:bg-white/5 text-on-surface font-bold py-2 rounded-lg transition-all text-xs text-center">
+                        Learn More
+                      </Link>
+                    )}
                   </div>
-                  <Link href={`/courses/${course.id}`} className="mt-stack-md mt-4 w-full border border-white/20 hover:bg-white/5 text-on-surface font-bold py-2 rounded-lg transition-all text-xs text-center">
-                    Learn More
-                  </Link>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Sidebar */}

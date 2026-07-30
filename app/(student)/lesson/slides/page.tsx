@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
+import CourseSwitcher from "@/components/CourseSwitcher";
 
 interface DbLesson {
   id: string;
@@ -28,6 +29,7 @@ interface SignedSlide {
 }
 
 interface Enrolment {
+  course_id: string;
   tier: string;
   waterline_week: number;
   courses?: { title: string };
@@ -37,11 +39,13 @@ function LessonSlidesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeLessonId = searchParams.get("id");
+  const requestedCourseId = searchParams.get("course");
 
   const [loading, setLoading] = useState(true);
   const [studentName, setStudentName] = useState("Student");
   const [studentEmail, setStudentEmail] = useState("");
 
+  const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [weeks, setWeeks] = useState<DbWeek[]>([]);
   const [currentLesson, setCurrentLesson] = useState<DbLesson | null>(null);
@@ -65,18 +69,19 @@ function LessonSlidesContent() {
         setStudentName(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Student");
         setStudentEmail(user.email || "");
 
-        // 1. Fetch active enrolment
-        const { data: enrolData, error: enrolError } = await supabase
+        // 1. Fetch all enrolments — a student can be enrolled in more than one course
+        const { data: allEnrolments, error: enrolError } = await supabase
           .from("enrolments")
           .select("*, courses(title)")
-          .eq("student_id", user.id)
-          .limit(1)
-          .maybeSingle();
+          .eq("student_id", user.id);
 
-        if (enrolError || !enrolData) {
+        if (enrolError || !allEnrolments || allEnrolments.length === 0) {
           router.push("/courses");
           return;
         }
+
+        setEnrolments(allEnrolments);
+        const enrolData = allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0];
 
         setEnrolment(enrolData);
         setCourseTitle(enrolData.courses?.title || "My Course");
@@ -150,7 +155,7 @@ function LessonSlidesContent() {
     };
 
     loadData();
-  }, [router, activeLessonId]);
+  }, [router, activeLessonId, requestedCourseId]);
 
   // Load the real signed slide-deck images for the current lesson
   useEffect(() => {
@@ -192,6 +197,10 @@ function LessonSlidesContent() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [goNext, goPrev]);
+
+  const handleSwitchCourse = (courseId: string) => {
+    router.push(`/lesson/slides?course=${courseId}`);
+  };
 
   // Fallback for lessons that only have the old single-link field, not a
   // generated deck yet — convert a Google Drive sharing link to an embed URL.
@@ -241,6 +250,8 @@ function LessonSlidesContent() {
           </div>
 
           <div className="flex items-center gap-6">
+            <CourseSwitcher enrolments={enrolments} activeCourseId={enrolment?.course_id || ""} onSwitch={handleSwitchCourse} />
+
             {totalSlides > 0 && (
               <div className="hidden md:flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full border border-white/5">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
@@ -378,7 +389,7 @@ function LessonSlidesContent() {
                         return (
                           <Link
                             key={lesson.id}
-                            href={isLocked ? "#" : `/lesson/slides?id=${lesson.id}`}
+                            href={isLocked ? "#" : `/lesson/slides?id=${lesson.id}&course=${enrolment?.course_id || ""}`}
                             className={`flex items-center gap-3 p-4 rounded-lg transition-colors cursor-pointer ${
                               isSelected
                                 ? "bg-primary/10 border border-primary/20"

@@ -26,7 +26,10 @@
       "Bash(node scripts/slides/generate.mjs --course=frontend-development --session=1)",
       "Bash(node scripts/slides/generate.mjs --course=python-fundamentals)",
       "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=python-fundamentals --contentSlug=python-fundamentals)",
-      "Bash(node --env-file=.env scripts/slides/_inspect3.mjs)"
+      "Bash(node --env-file=.env scripts/slides/_inspect3.mjs)",
+      "Bash(grep -n 'href={`/lesson/slides?id=\\\\|href={isLocked ? \"#\" : `/lesson/slides' \"app/\\(student\\)/lesson/slides/page.tsx\")",
+      "Bash(grep -n 'href={`/lesson/video?id=\\\\|href={`/lesson/slides?id=' \"app/\\(student\\)/lesson/video/page.tsx\")",
+      "Bash(grep -n \"Dashboard Bento Grid\\\\|Specialized Tracks Section\\\\|^            </div>$\\\\|^            </section>$\" \"app/\\(student\\)/student-dashboard/page.tsx\")"
     ]
   }
 }
