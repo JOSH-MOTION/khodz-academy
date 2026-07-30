@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppSidebar from "@/components/AppSidebar";
+import NotificationBell from "@/components/NotificationBell";
 import { createClient } from "@/lib/supabase/client";
 
 interface UserProfile {
@@ -163,10 +164,7 @@ export default function StudentDashboardPage() {
                 </span>
               </div>
               
-              <button className="relative p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                <span className="material-symbols-outlined">notifications</span>
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
-              </button>
+              <NotificationBell />
               
               <div className="flex items-center gap-3 pl-4 border-l border-white/10">
                 <div className="text-right hidden sm:block">

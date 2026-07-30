@@ -18,7 +18,14 @@
       "Bash(node --env-file=.env scripts/slides/_inspect2.mjs)",
       "Bash(npx next *)",
       "Bash(node --env-file=.env scripts/slides/_test_admin_query.mjs)",
-      "Bash(rm -f scripts/slides/_test_admin_query.mjs)"
+      "Bash(rm -f scripts/slides/_test_admin_query.mjs)",
+      "Bash(node scripts/slides/generate.mjs --course=react-development --session=4)",
+      "Bash(node scripts/slides/generate.mjs --course=frontend-development --session=3)",
+      "Bash(node scripts/slides/generate.mjs --course=python-fundamentals --session=1)",
+      "Bash(grep -n \"python$\\\\|python\\\\`\\\\`\\\\`\" \"content/python-fundamentals/python-lesson-01-getting-started.md\")",
+      "Bash(node scripts/slides/generate.mjs --course=frontend-development --session=1)",
+      "Bash(node scripts/slides/generate.mjs --course=python-fundamentals)",
+      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=python-fundamentals --contentSlug=python-fundamentals)"
     ]
   }
 }

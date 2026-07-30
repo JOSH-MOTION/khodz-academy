@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { COURSES_MAP } from "@/lib/courses-data";
+import NotificationBell from "@/components/NotificationBell";
 
 function getCoursePaymentInfo(courseId: string) {
   const course = COURSES_MAP[courseId] || COURSES_MAP["beginner-web-design"];
@@ -117,7 +118,7 @@ function BalancePaymentContent() {
           KHODZ ACADEMY
         </Link>
         <div className="flex items-center gap-4 text-xs">
-          <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
+          <NotificationBell />
           <div className="w-10 h-10 rounded-full bg-surface-container-high border border-white/10 flex items-center justify-center overflow-hidden">
             <span className="material-symbols-outlined text-on-surface-variant text-xl">account_circle</span>
           </div>

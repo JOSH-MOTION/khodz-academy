@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
+import NotificationBell from "@/components/NotificationBell";
 
 interface DbLesson {
   id: string;
@@ -181,9 +182,7 @@ function VideoLessonContent() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            <NotificationBell />
             <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-sm uppercase">
               {studentEmail.slice(0, 2)}
             </div>

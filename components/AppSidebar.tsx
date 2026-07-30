@@ -118,18 +118,12 @@ export default function AppSidebar({ role = "student" }: AppSidebarProps) {
 
       {/* Bottom section */}
       <div className="px-4 pt-4 border-t border-white/5 space-y-0.5">
-        <div className="bg-primary/10 rounded-xl p-4 mb-4">
-          <p className="text-[11px] text-primary font-bold mb-2 uppercase tracking-wide">Upgrade to Pro</p>
-          <button className="w-full bg-primary text-black py-2 rounded font-bold text-xs transition-transform active:scale-95 cursor-pointer hover:brightness-110">
-            Go Premium
-          </button>
-        </div>
-        <Link
-          href="#"
+        <a
+          href="mailto:sales@khodz.academy"
           className="flex items-center gap-3 py-2.5 px-3 text-on-surface-variant hover:text-on-surface text-xs rounded-lg hover:bg-surface-variant/50 transition-all"
         >
           <span className="material-symbols-outlined text-[18px]">help_outline</span> Support
-        </Link>
+        </a>
         <Link
           href="/auth/login"
           className="flex items-center gap-3 py-2.5 px-3 text-on-surface-variant hover:text-error text-xs rounded-lg hover:bg-error/5 transition-all"

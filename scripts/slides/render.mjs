@@ -45,28 +45,46 @@ const FILENAME_BY_LANG = {
   json: "data.json",
   bash: "terminal",
   sh: "terminal",
+  python: "main.py",
+  py: "main.py",
 };
 
 function filenameFor(lang) {
   return FILENAME_BY_LANG[lang] || "";
 }
 
-/** Very small, presentation-only regex highlighter — not a real parser, just enough to read well on a slide. */
+const HASH_COMMENT_LANGS = ["bash", "sh", "python", "py"];
+const PYTHON_KEYWORDS =
+  "def|return|if|elif|else|for|while|import|from|as|class|try|except|finally|with|in|not|and|or|is|None|True|False|print|pass|break|continue|lambda|yield";
+const JS_KEYWORDS = "const|let|var|function|return|async|await|if|else|for|import|from|export|default|new";
+
+/** Very small, presentation-only single-pass tokenizer — not a real parser,
+ * just enough to read well on a slide. Single-pass (one combined regex,
+ * each character matched at most once) rather than chained .replace() calls
+ * deliberately: a later pass re-scanning already-substituted HTML (e.g. a
+ * keyword regex matching the literal word "class" inside a `class="tok-..."`
+ * attribute a comment/string pass had already inserted) would corrupt the
+ * markup. */
 function highlightCode(code, lang) {
-  let out = esc(code);
-  out = out.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="tok-comment">$1</span>');
-  out = out.replace(/(\/\/[^\n]*)/g, '<span class="tok-comment">$1</span>');
-  out = out.replace(/(&quot;[^&\n]*?&quot;|&#39;[^&\n]*?&#39;)/g, '<span class="tok-string">$1</span>');
-  if (["html", "jsx"].includes(lang)) {
-    out = out.replace(/(&lt;\/?[a-zA-Z][\w-]*)/g, '<span class="tok-tag">$1</span>');
-  }
-  if (["js", "javascript", "jsx"].includes(lang)) {
-    out = out.replace(
-      /\b(const|let|var|function|return|async|await|if|else|for|import|from|export|default|new)\b/g,
-      '<span class="tok-keyword">$1</span>'
-    );
-  }
-  return out;
+  const groups = [];
+  if (["html", "jsx"].includes(lang)) groups.push("(?<htmlComment><!--[\\s\\S]*?-->)");
+  groups.push(HASH_COMMENT_LANGS.includes(lang) ? "(?<comment>#[^\\n]*)" : "(?<comment>//[^\\n]*)");
+  groups.push('(?<string>"[^"\\n]*"|\'[^\'\\n]*\')');
+  if (["html", "jsx"].includes(lang)) groups.push("(?<tag><\\/?[a-zA-Z][\\w-]*)");
+  if (["python", "py"].includes(lang)) groups.push(`(?<keyword>\\b(?:${PYTHON_KEYWORDS})\\b)`);
+  else if (["js", "javascript", "jsx"].includes(lang)) groups.push(`(?<keyword>\\b(?:${JS_KEYWORDS})\\b)`);
+  groups.push("(?<plain>[\\s\\S])");
+
+  const re = new RegExp(groups.join("|"), "g");
+
+  return code.replace(re, (match, ...rest) => {
+    const named = rest[rest.length - 1];
+    if (named.htmlComment || named.comment) return `<span class="tok-comment">${esc(match)}</span>`;
+    if (named.string) return `<span class="tok-string">${esc(match)}</span>`;
+    if (named.tag) return `<span class="tok-tag">${esc(match)}</span>`;
+    if (named.keyword) return `<span class="tok-keyword">${esc(match)}</span>`;
+    return esc(match);
+  });
 }
 
 function diagramHTML(diagram) {

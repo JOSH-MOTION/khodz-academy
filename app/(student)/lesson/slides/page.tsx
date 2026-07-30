@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
+import NotificationBell from "@/components/NotificationBell";
 
 interface DbLesson {
   id: string;
@@ -185,9 +186,7 @@ function LessonSlidesContent() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                <span className="material-symbols-outlined text-xl">notifications</span>
-              </button>
+              <NotificationBell className="text-xl" />
               <div className="w-8 h-8 rounded-full bg-secondary-container overflow-hidden border border-primary/20 flex items-center justify-center font-bold text-on-secondary-container text-xs uppercase">
                 {studentEmail.slice(0, 2)}
               </div>

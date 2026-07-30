@@ -51,7 +51,7 @@ export default function Navbar() {
 
         {/* Right-side actions */}
         <div className="flex items-center gap-4">
-          {/* Dashboard quick-links (desktop only) */}
+          {/* Dashboard quick-link (desktop only) */}
           <div className="hidden lg:flex items-center gap-3 border-r border-white/10 pr-4 mr-1">
             <Link
               href="/student-dashboard"
@@ -59,13 +59,6 @@ export default function Navbar() {
             >
               <span className="material-symbols-outlined text-[16px]">school</span>
               Student
-            </Link>
-            <Link
-              href="/admin-dashboard"
-              className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors font-semibold"
-            >
-              <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-              Admin
             </Link>
           </div>
 
@@ -108,9 +101,6 @@ export default function Navbar() {
           <hr className="border-white/10" />
           <Link href="/student-dashboard" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-on-surface-variant hover:text-primary flex items-center gap-2">
             <span className="material-symbols-outlined text-[16px]">school</span> Student Dashboard
-          </Link>
-          <Link href="/admin-dashboard" onClick={() => setMobileOpen(false)} className="text-sm font-semibold text-on-surface-variant hover:text-primary flex items-center gap-2">
-            <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span> Admin Dashboard
           </Link>
           <Link href="/auth/login" onClick={() => setMobileOpen(false)} className="bg-primary text-on-primary font-bold text-xs px-4 py-2 rounded text-center">
             Get Started
