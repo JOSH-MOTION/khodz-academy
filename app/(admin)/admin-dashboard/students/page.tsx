@@ -3,76 +3,154 @@
 import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import AdminPinGuard from "@/components/AdminPinGuard";
+import { createClient } from "@/lib/supabase/client";
 
-type Status = "Active" | "Inactive" | "Pending";
+type Tier = "admitted" | "deposited" | "paid";
+
+interface Enrolment {
+  id: string;
+  courseId: string;
+  courseTitle: string | null;
+  tier: Tier;
+  cohort: string | null;
+  waterlineWeek: number;
+  paymentDeadline: string | null;
+  enrolledAt: string;
+}
+
+interface Payment {
+  amount: number;
+  paymentType: string;
+  status: string;
+  paidAt: string;
+}
 
 interface Student {
   id: string;
+  email: string | null;
   name: string;
-  email: string;
-  phone: string;
-  cohort: string;
-  enrolled: string;
-  progress: number;
-  status: Status;
-  avatar: string;
+  createdAt: string;
+  lastSignInAt: string | null;
+  enrolments: Enrolment[];
+  payments: Payment[];
 }
 
-const studentsData: Student[] = [
-  { id: "s1",  name: "Kwame Asante",    email: "kwame@khodz.academy",    phone: "233240000001", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 87, status: "Active",   avatar: "KA" },
-  { id: "s2",  name: "Ama Owusu",       email: "ama@khodz.academy",       phone: "233240000002", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 62, status: "Active",   avatar: "AO" },
-  { id: "s3",  name: "Kofi Mensah",     email: "kofi@khodz.academy",     phone: "233240000003", cohort: "Cohort 03", enrolled: "Sep 2023", progress: 100, status: "Inactive", avatar: "KM" },
-  { id: "s4",  name: "Abena Boateng",   email: "abena@khodz.academy",   phone: "233240000004", cohort: "Cohort 04", enrolled: "Feb 2024", progress: 44, status: "Pending",  avatar: "AB" },
-  { id: "s5",  name: "Yaw Darko",       email: "yaw@khodz.academy",       phone: "233240000005", cohort: "Cohort 03", enrolled: "Oct 2023", progress: 78, status: "Active",   avatar: "YD" },
-  { id: "s6",  name: "Efua Koomson",    email: "efua@khodz.academy",    phone: "233240000006", cohort: "Cohort 04", enrolled: "Feb 2024", progress: 15, status: "Pending",  avatar: "EK" },
-  { id: "s7",  name: "Nana Adjei",      email: "nana@khodz.academy",      phone: "233240000007", cohort: "Cohort 04", enrolled: "Jan 2024", progress: 55, status: "Active",   avatar: "NA" },
-  { id: "s8",  name: "Akosua Frimpong", email: "akosua@khodz.academy", phone: "233240000008", cohort: "Cohort 03", enrolled: "Sep 2023", progress: 93, status: "Active",   avatar: "AF" },
-];
+interface Course {
+  id: string;
+  title: string;
+}
 
-const statusColors: Record<Status, string> = {
-  Active:   "bg-primary/20 text-primary border-primary/30",
-  Inactive: "bg-white/5 text-on-surface-variant border-white/10",
-  Pending:  "bg-amber-500/20 text-amber-400 border-amber-500/30",
+const TIER_LABEL: Record<Tier, string> = {
+  admitted: "Admitted",
+  deposited: "Deposited",
+  paid: "Paid",
+};
+
+const TIER_COLOR: Record<Tier, string> = {
+  paid: "bg-primary/20 text-primary border-primary/30",
+  deposited: "bg-tertiary/20 text-tertiary border-tertiary/30",
+  admitted: "bg-white/5 text-on-surface-variant border-white/10",
 };
 
 export default function AdminStudentsPage() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | Status>("All");
   const [cohortFilter, setCohortFilter] = useState("All");
 
+  const [managing, setManaging] = useState<Student | null>(null);
+  const [formCourseId, setFormCourseId] = useState("");
+  const [formTier, setFormTier] = useState<Tier>("paid");
+  const [formCohort, setFormCohort] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const cohorts = ["All", ...Array.from(new Set(studentsData.map((s) => s.cohort)))];
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const filtered = studentsData.filter((s) => {
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch("/api/admin/students");
+        const json = await res.json();
+        setStudents(json.students || []);
+      } catch (err) {
+        console.error("Failed to load students:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [refreshKey]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("courses")
+      .select("id, title")
+      .order("title")
+      .then(({ data }) => setCourses(data || []));
+  }, []);
+
+  const cohorts = ["All", ...Array.from(new Set(students.flatMap((s) => s.enrolments.map((e) => e.cohort).filter((c): c is string => !!c))))];
+
+  const filtered = students.filter((s) => {
     const matchSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "All" || s.status === statusFilter;
-    const matchCohort = cohortFilter === "All" || s.cohort === cohortFilter;
-    return matchSearch && matchStatus && matchCohort;
+      s.name.toLowerCase().includes(search.toLowerCase()) || (s.email || "").toLowerCase().includes(search.toLowerCase());
+    const matchCohort = cohortFilter === "All" || s.enrolments.some((e) => e.cohort === cohortFilter);
+    return matchSearch && matchCohort;
   });
 
   const stats = [
-    { label: "Total Students",  value: studentsData.length,                                        icon: "group" },
-    { label: "Active",          value: studentsData.filter((s) => s.status === "Active").length,   icon: "check_circle" },
-    { label: "Pending",         value: studentsData.filter((s) => s.status === "Pending").length,  icon: "pending" },
-    { label: "Avg Progress",    value: `${Math.round(studentsData.reduce((a, s) => a + s.progress, 0) / studentsData.length)}%`, icon: "insights" },
+    { label: "Total Students", value: students.length, icon: "group" },
+    { label: "Paid (Full Access)", value: students.filter((s) => s.enrolments.some((e) => e.tier === "paid")).length, icon: "check_circle" },
+    { label: "Awaiting Balance", value: students.filter((s) => s.enrolments.some((e) => e.tier === "deposited")).length, icon: "pending" },
+    {
+      label: "Total Received",
+      value: `GHS ${students.reduce((sum, s) => sum + s.payments.reduce((a, p) => a + Number(p.amount), 0), 0).toLocaleString()}`,
+      icon: "payments",
+    },
   ];
+
+  function openManage(student: Student, enrolment?: Enrolment) {
+    setManaging(student);
+    setFormCourseId(enrolment?.courseId || courses[0]?.id || "");
+    setFormTier(enrolment?.tier || "paid");
+    setFormCohort(enrolment?.cohort || "");
+  }
+
+  async function saveAccess() {
+    if (!managing || !formCourseId) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/enrolments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId: managing.id, courseId: formCourseId, tier: formTier, cohort: formCohort }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || "Save failed");
+      }
+      setManaging(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <AdminPinGuard>
       <div className="bg-background text-on-background font-body-md min-h-screen flex">
-      <AppSidebar role="admin" />
+        <AppSidebar role="admin" />
 
-      <main className="flex-1 lg:ml-64 min-h-screen">
-        {/* ─── Header ──────────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-40 bg-surface/70 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="font-syne text-xl font-bold text-on-surface">Student Management</h2>
-            <p className="text-xs text-on-surface-variant mt-1">Track enrolments, progress, and cohort assignments.</p>
-          </div>
-          <div className="flex gap-3 items-center">
-            {/* Search */}
+        <main className="flex-1 lg:ml-64 min-h-screen">
+          <header className="sticky top-0 z-40 bg-surface/70 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="font-syne text-xl font-bold text-on-surface">Student Management</h2>
+              <p className="text-xs text-on-surface-variant mt-1">Real registrations, payments, and cohort assignments.</p>
+            </div>
             <div className="relative hidden md:block">
               <input
                 value={search}
@@ -82,170 +160,204 @@ export default function AdminStudentsPage() {
               />
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">search</span>
             </div>
-            <button className="bg-primary text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer">
-              + Enrol Student
-            </button>
-          </div>
-        </header>
+          </header>
 
-        <div className="p-6 max-w-[1280px] mx-auto space-y-6">
-
-          {/* ─── Stats ───────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((stat, i) => (
-              <div key={i} className="glass-card rounded-xl p-4 inner-glow flex items-center gap-3">
-                <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <span className="material-symbols-outlined text-primary text-lg">{stat.icon}</span>
+          <div className="p-6 max-w-[1280px] mx-auto space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {stats.map((stat, i) => (
+                <div key={i} className="glass-card rounded-xl p-4 inner-glow flex items-center gap-3">
+                  <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary text-lg">{stat.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">{stat.label}</p>
+                    <p className="font-syne text-xl text-white font-bold leading-tight">{stat.value}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">{stat.label}</p>
-                  <p className="font-syne text-xl text-white font-bold leading-tight">{stat.value}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* ─── Filters ─────────────────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-3">
-            {/* Cohort */}
-            <div className="flex gap-2 flex-wrap">
-              {cohorts.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCohortFilter(c)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                    cohortFilter === c
-                      ? "bg-secondary-container text-on-secondary-container border-primary"
-                      : "bg-surface-container text-on-surface-variant border-white/10 hover:border-primary"
-                  }`}
-                >
-                  {c}
-                </button>
               ))}
             </div>
-            {/* Status */}
-            <div className="flex gap-2 flex-wrap ml-auto">
-              {(["All", "Active", "Pending", "Inactive"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                    statusFilter === s
-                      ? "bg-secondary-container text-on-secondary-container border-primary"
-                      : "bg-surface-container text-on-surface-variant border-white/10 hover:border-primary"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* ─── Table ───────────────────────────────────────────────────────── */}
-          <div className="glass-card rounded-xl overflow-hidden" id="students-table">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[700px]">
-                <thead className="bg-surface-container-high/50">
-                  <tr className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">
-                    <th className="p-4">Student</th>
-                    <th className="p-4">Cohort</th>
-                    <th className="p-4">Enrolled</th>
-                    <th className="p-4">Progress</th>
-                    <th className="p-4 text-center">Status</th>
-                    <th className="p-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 text-sm">
-                  {filtered.map((student) => (
-                    <tr key={student.id} className="hover:bg-white/5 transition-colors">
-                      {/* Student */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-xs flex-shrink-0">
-                            {student.avatar}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-xs text-on-surface truncate">{student.name}</p>
-                            <p className="text-[10px] text-on-surface-variant truncate">{student.email} • {student.phone}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Cohort */}
-                      <td className="p-4">
-                        <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-bold uppercase">
-                          {student.cohort}
-                        </span>
-                      </td>
-                      {/* Enrolled */}
-                      <td className="p-4 text-xs text-on-surface-variant">{student.enrolled}</td>
-                      {/* Progress bar */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 bg-surface-variant rounded-full overflow-hidden min-w-[80px]">
-                            <div
-                              className="h-full bg-primary rounded-full transition-all"
-                              style={{ width: `${student.progress}%`, boxShadow: "0 0 8px #45ec9d" }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-bold text-on-surface w-8 text-right">{student.progress}%</span>
-                        </div>
-                      </td>
-                      {/* Status */}
-                      <td className="p-4 text-center">
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase border ${statusColors[student.status]}`}>
-                          {student.status}
-                        </span>
-                      </td>
-                      {/* Actions */}
-                      <td className="p-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                            title="View profile"
-                          >
-                            <span className="material-symbols-outlined text-base">person</span>
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                            title="Send message"
-                          >
-                            <span className="material-symbols-outlined text-base">mail</span>
-                          </button>
-                          <a
-                            href={`https://wa.me/${student.phone}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-[#25D366] transition-colors flex items-center justify-center cursor-pointer"
-                            title="Chat on WhatsApp"
-                          >
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.665.989 3.3.15 5.336.15 5.548 0 10.061-4.512 10.064-10.064.002-2.69-1.042-5.219-2.937-7.117-1.894-1.897-4.417-2.942-7.106-2.943-5.556 0-10.068 4.513-10.072 10.067-.001 2.01.523 3.974 1.517 5.717L2.148 21.83l6.5-.676zM17.7 14.542c-.31-.156-1.838-.907-2.122-1.01-.284-.103-.49-.156-.696.156-.206.31-.798 1.01-.978 1.216-.18.206-.36.232-.67.077-.31-.156-1.31-.483-2.496-1.542-.924-.824-1.547-1.842-1.728-2.152-.18-.31-.02-.477.135-.632.14-.139.31-.36.465-.54.155-.18.206-.31.31-.516.103-.207.05-.387-.025-.542-.077-.156-.696-1.678-.954-2.298-.25-.602-.503-.52-.69-.53l-.587-.01c-.206 0-.54.077-.824.387-.284.31-1.082 1.057-1.082 2.578 0 1.52 1.108 2.99 1.263 3.196.155.206 2.18 3.327 5.28 4.664.737.318 1.312.507 1.76.65.74.235 1.414.201 1.947.122.593-.087 1.838-.75 2.096-1.472.258-.722.258-1.342.18-1.472-.078-.13-.284-.207-.593-.363z"/>
-                            </svg>
-                          </a>
-                          <button
-                            className="p-1.5 hover:bg-error/10 rounded text-on-surface-variant hover:text-error transition-colors cursor-pointer"
-                            title="Remove student"
-                          >
-                            <span className="material-symbols-outlined text-base">person_remove</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {filtered.length === 0 && (
-              <div className="py-16 text-center text-on-surface-variant text-xs">
-                <span className="material-symbols-outlined text-4xl block mb-2 opacity-30">manage_search</span>
-                No students match your filters.
+            {cohorts.length > 1 && (
+              <div className="flex gap-2 flex-wrap">
+                {cohorts.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCohortFilter(c)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                      cohortFilter === c
+                        ? "bg-secondary-container text-on-secondary-container border-primary"
+                        : "bg-surface-container text-on-surface-variant border-white/10 hover:border-primary"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
               </div>
             )}
+
+            <div className="glass-card rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[760px]">
+                  <thead className="bg-surface-container-high/50">
+                    <tr className="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">
+                      <th className="p-4">Student</th>
+                      <th className="p-4">Courses</th>
+                      <th className="p-4">Payments</th>
+                      <th className="p-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-sm">
+                    {filtered.map((student) => (
+                      <tr key={student.id} className="hover:bg-white/5 transition-colors align-top">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-xs flex-shrink-0 uppercase">
+                              {student.name.slice(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-xs text-on-surface truncate">{student.name}</p>
+                              <p className="text-[10px] text-on-surface-variant truncate">{student.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {student.enrolments.length === 0 ? (
+                            <span className="text-[10px] text-on-surface-variant italic">No course yet</span>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              {student.enrolments.map((e) => (
+                                <button
+                                  key={e.id}
+                                  onClick={() => openManage(student, e)}
+                                  className="flex items-center gap-2 text-left cursor-pointer group"
+                                  title="Edit this enrolment"
+                                >
+                                  <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${TIER_COLOR[e.tier]}`}>
+                                    {TIER_LABEL[e.tier]}
+                                  </span>
+                                  <span className="text-[11px] text-on-surface group-hover:text-primary transition-colors truncate">
+                                    {e.courseTitle || e.courseId}
+                                  </span>
+                                  {e.cohort && (
+                                    <span className="text-[9px] text-on-surface-variant border border-white/10 px-1.5 rounded">{e.cohort}</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {student.payments.length === 0 ? (
+                            <span className="text-[10px] text-on-surface-variant italic">None recorded</span>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              {student.payments.slice(0, 2).map((p, i) => (
+                                <span key={i} className="text-[10px] text-on-surface">
+                                  GHS {Number(p.amount).toLocaleString()} · {p.paymentType}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4 text-center">
+                          <button
+                            onClick={() => openManage(student)}
+                            className="bg-primary/10 text-primary border border-primary/30 px-3 py-1.5 rounded text-[10px] font-bold hover:bg-primary hover:text-black transition-all cursor-pointer"
+                          >
+                            Manage Access
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {!loading && filtered.length === 0 && (
+                <div className="py-16 text-center text-on-surface-variant text-xs">
+                  <span className="material-symbols-outlined text-4xl block mb-2 opacity-30">manage_search</span>
+                  {students.length === 0 ? "No students have signed up yet." : "No students match your filters."}
+                </div>
+              )}
+              {loading && (
+                <div className="py-16 text-center">
+                  <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+
+        {managing && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="glass-card rounded-2xl w-full max-w-md p-6 inner-glow border border-white/10 relative">
+              <button
+                onClick={() => setManaging(null)}
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-white cursor-pointer material-symbols-outlined text-sm"
+              >
+                close
+              </button>
+              <h3 className="font-syne text-lg font-bold text-white mb-1">Manage Access</h3>
+              <p className="text-xs text-on-surface-variant mb-6">{managing.name} · {managing.email}</p>
+
+              <div className="space-y-4 text-xs">
+                <div className="space-y-2 flex flex-col">
+                  <label className="text-on-surface-variant font-semibold">Course</label>
+                  <select
+                    value={formCourseId}
+                    onChange={(e) => setFormCourseId(e.target.value)}
+                    className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white"
+                  >
+                    {courses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2 flex flex-col">
+                  <label className="text-on-surface-variant font-semibold">Access Tier</label>
+                  <select
+                    value={formTier}
+                    onChange={(e) => setFormTier(e.target.value as Tier)}
+                    className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white"
+                  >
+                    <option value="admitted">Admitted (no content access)</option>
+                    <option value="deposited">Deposited (partial access, waterline-gated)</option>
+                    <option value="paid">Paid (full access to all slides/video)</option>
+                  </select>
+                </div>
+                <div className="space-y-2 flex flex-col">
+                  <label className="text-on-surface-variant font-semibold">Cohort</label>
+                  <input
+                    value={formCohort}
+                    onChange={(e) => setFormCohort(e.target.value)}
+                    placeholder="e.g. Cohort 05"
+                    className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setManaging(null)}
+                    className="flex-1 bg-surface-container-high border border-white/10 text-on-surface py-3 rounded-lg font-bold hover:bg-surface-variant transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveAccess}
+                    disabled={saving || !formCourseId}
+                    className="flex-1 bg-primary text-background py-3 rounded-lg font-bold hover:brightness-110 transition-all text-black cursor-pointer disabled:opacity-60"
+                  >
+                    {saving ? "Saving…" : "Save Access"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </AdminPinGuard>
   );
 }

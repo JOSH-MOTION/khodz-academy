@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseLessonTitle } from "./parseLesson.mjs";
+import { listLessonFiles } from "./lessonFiles.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -61,38 +62,31 @@ async function main() {
   if (!course) throw new Error(`courses.id "${courseId}" does not exist — create it first.`);
 
   const lessonRoot = path.join(COURSE_DIR, contentSlug);
-  const lessonDirs = readdirSync(lessonRoot, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && /^lesson-\d+-/.test(d.name))
-    .map((d) => d.name)
-    .sort();
+  const lessonFiles = listLessonFiles(CONTENT_DIR, contentSlug, null);
 
-  if (lessonDirs.length === 0) {
-    console.error(`No lesson-NN-* folders found in ${lessonRoot}. Run slides:generate first.`);
+  if (lessonFiles.length === 0) {
+    console.error(`No lesson markdown files recognized for "${contentSlug}" in ${CONTENT_DIR}.`);
     process.exit(1);
   }
 
   let totalUploaded = 0;
 
-  for (const lessonSlug of lessonDirs) {
-    const m = lessonSlug.match(/^lesson-(\d+)-/);
-    const lessonNumber = parseInt(m[1], 10);
-    const weekNumber = Math.ceil(lessonNumber / 2);
-    const orderInWeek = ((lessonNumber - 1) % 2) + 1;
+  for (const { filename, meta } of lessonFiles) {
+    const { weekNumber, orderInWeek, lessonSlug } = meta;
+    const slideDir = path.join(lessonRoot, lessonSlug);
 
-    let lessonTitle = lessonSlug;
-    const mdMatch = readdirSync(path.join(CONTENT_DIR, contentSlug)).find((f) =>
-      f.startsWith(`${String(lessonNumber).padStart(2, "0")}-lesson-${m[1]}-`)
-    );
-    if (mdMatch) {
-      lessonTitle = parseLessonTitle(readFileSync(path.join(CONTENT_DIR, contentSlug, mdMatch), "utf8"));
+    if (!existsSync(slideDir)) {
+      console.warn(`  (skipping ${lessonSlug} — no generated slides at ${slideDir}, run slides:generate first)`);
+      continue;
     }
+
+    const lessonTitle = parseLessonTitle(readFileSync(path.join(CONTENT_DIR, contentSlug, filename), "utf8"));
 
     console.log(`\n${lessonSlug} → week ${weekNumber}, slot ${orderInWeek} — "${lessonTitle}"`);
 
     const week = await upsertWeek(supabase, courseId, weekNumber);
     const lesson = await upsertLesson(supabase, week.id, orderInWeek, lessonTitle);
 
-    const slideDir = path.join(lessonRoot, lessonSlug);
     const slideFiles = readdirSync(slideDir)
       .filter((f) => /^slide-\d+\.webp$/.test(f))
       .sort();

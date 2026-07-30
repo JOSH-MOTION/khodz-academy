@@ -8,6 +8,7 @@ import { loadThemeVars, CANVAS_WIDTH, CANVAS_HEIGHT } from "./theme.mjs";
 import { parseLessonSlides, parseLessonTitle } from "./parseLesson.mjs";
 import { matchDiagram } from "./diagram.mjs";
 import { renderSlideHTML } from "./render.mjs";
+import { listLessonFiles, courseOverviewFile } from "./lessonFiles.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -15,11 +16,11 @@ const CONTENT_DIR = path.join(ROOT, "content");
 const OUTPUT_DIR = path.join(ROOT, "course");
 
 function parseArgs(argv) {
-  const args = { course: null, lesson: null };
+  const args = { course: null, session: null };
   for (const a of argv) {
     const [k, v] = a.replace(/^--/, "").split("=");
     if (k === "course") args.course = v;
-    if (k === "lesson") args.lesson = v.padStart(2, "0");
+    if (k === "lesson" || k === "session") args.session = parseInt(v, 10);
   }
   return args;
 }
@@ -31,23 +32,12 @@ function listCourses(filter) {
     .filter((name) => !filter || name === filter);
 }
 
-function listLessonFiles(courseSlug, lessonFilter) {
-  const dir = path.join(CONTENT_DIR, courseSlug);
-  return readdirSync(dir)
-    .filter((f) => /^\d+-lesson-\d+-.+\.md$/.test(f))
-    .filter((f) => {
-      if (!lessonFilter) return true;
-      const m = f.match(/^\d+-lesson-(\d+)-/);
-      return m && m[1] === lessonFilter;
-    })
-    .sort();
-}
-
 function courseTitleFor(courseSlug) {
   try {
-    const overviewFile = path.join(CONTENT_DIR, courseSlug, "00-curriculum-overview.md");
-    const markdown = readFileSync(overviewFile, "utf8");
-    const raw = parseLessonTitle(markdown); // e.g. "Khodz Academy — Frontend Development Foundations"
+    const dir = path.join(CONTENT_DIR, courseSlug);
+    const overviewFile = courseOverviewFile(CONTENT_DIR, courseSlug);
+    if (!overviewFile) throw new Error("no curriculum overview file found");
+    const raw = parseLessonTitle(readFileSync(path.join(dir, overviewFile), "utf8")); // e.g. "Khodz Academy — Frontend Development Foundations"
     return raw.replace(/^Khodz Academy\s*[—-]\s*/i, "").trim() || raw;
   } catch {
     return courseSlug
@@ -57,19 +47,8 @@ function courseTitleFor(courseSlug) {
   }
 }
 
-function lessonMetaFromFilename(filename) {
-  const m = filename.match(/^\d+-lesson-(\d+)-(.+)\.md$/);
-  if (!m) throw new Error(`Unexpected lesson filename: ${filename}`);
-  const lessonNumber = parseInt(m[1], 10);
-  return {
-    lessonNumber,
-    weekNumber: Math.ceil(lessonNumber / 2),
-    lessonSlug: `lesson-${m[1]}-${m[2]}`,
-  };
-}
-
 async function main() {
-  const { course, lesson } = parseArgs(process.argv.slice(2));
+  const { course, session } = parseArgs(process.argv.slice(2));
   const themeVars = loadThemeVars();
   const courses = listCourses(course);
 
@@ -85,17 +64,17 @@ async function main() {
 
   try {
     for (const courseSlug of courses) {
-      const lessonFiles = listLessonFiles(courseSlug, lesson);
+      const lessonFiles = listLessonFiles(CONTENT_DIR, courseSlug, session);
       if (lessonFiles.length === 0) {
         console.warn(`  (no matching lesson files in ${courseSlug})`);
         continue;
       }
       const courseTitle = courseTitleFor(courseSlug);
 
-      for (const filename of lessonFiles) {
+      for (const { filename, meta: fileMeta } of lessonFiles) {
         const filePath = path.join(CONTENT_DIR, courseSlug, filename);
         const markdown = readFileSync(filePath, "utf8");
-        const { lessonNumber, weekNumber, lessonSlug } = lessonMetaFromFilename(filename);
+        const { weekNumber, lessonSlug, sessionNumber } = fileMeta;
         const lessonTitle = parseLessonTitle(markdown);
         const slides = parseLessonSlides(markdown);
 
@@ -115,7 +94,7 @@ async function main() {
             themeVars,
             slide,
             diagram,
-            meta: { lessonNumber, weekNumber, lessonTitle, courseTitle, total: slides.length },
+            meta: { sessionNumber, weekNumber, lessonTitle, courseTitle, total: slides.length },
           });
 
           await page.setContent(html, { waitUntil: "networkidle" });

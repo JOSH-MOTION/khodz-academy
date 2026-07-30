@@ -683,7 +683,7 @@ export const COURSES: Course[] = [
   },
   {
     id: "vacation-advanced-web-apps",
-    title: "Advanced Web Apps (Vacation Coding Program)",
+    title: "Advanced Web Apps (React Foundations)",
     category: "Full Stack",
     duration: "2 Months",
     tuitionGhs: 2000,
@@ -691,17 +691,24 @@ export const COURSES: Course[] = [
     totalGhs: 2200,
     modes: ["Online Live Classes (Google Meet)"],
     outcomes: [
-      "React component hierarchies",
-      "State and Props synchronization",
-      "Asynchronous HTTP and API fetching",
-      "Dynamic user experience & flows",
-      "Vercel / cloud deployment pipelines",
-      "Professional GitHub portfolio construction"
+      "React fundamentals: components, props, state (useState), JSX",
+      "Conditional rendering, lists, and controlled forms",
+      "Styling React apps with Tailwind CSS",
+      "Data fetching and side effects with useEffect",
+      "Client-side routing with React Router (nested & dynamic routes)",
+      "Context API and custom hooks for state and logic reuse",
+      "CRUD operations against APIs, auth concepts, and protected routes",
+      "Deploying a real multi-page React app to Vercel"
     ],
     projects: [
-      "Interactive Single Page React Dashboard",
-      "Dynamic API-Powered Web Application",
-      "Production-grade Capstone Portfolio"
+      "Counter App",
+      "To-Do App",
+      "Mini Admin Dashboard",
+      "Movie Search App",
+      "Multi-page Website",
+      "Theme Switcher",
+      "Student Management App",
+      "Final Capstone Project"
     ],
     prerequisites: [
       "Completion of Web Foundations (Program 1) or equivalent Javascript & HTML/CSS knowledge"
@@ -709,24 +716,24 @@ export const COURSES: Course[] = [
     syllabus: [
       {
         num: "01",
-        title: "Month 1: React.js & Component Architectures",
+        title: "Month 1: React Fundamentals (Weeks 1–4)",
         details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
         sessions: [
-          { title: "React paradigm shift, Vite, and JSX basics", preview: true, type: "video" },
-          { title: "Building reusable UI components", preview: true, type: "video" },
-          { title: "Managing local state and interactive inputs", preview: false, type: "lock" },
-          { title: "Synchronizing data flow via props and hooks", preview: false, type: "lock" }
+          { title: "Introduction to React, Vite, and JSX", preview: true, type: "video" },
+          { title: "Components, Props & Component Composition", preview: true, type: "video" },
+          { title: "State (useState), Events & Conditional Rendering", preview: false, type: "lock" },
+          { title: "Styling with Tailwind, useEffect & Fetching APIs", preview: false, type: "lock" }
         ]
       },
       {
         num: "02",
-        title: "Month 2: APIs, Production Projects & Deployment",
+        title: "Month 2: Intermediate React (Weeks 5–8)",
         details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
         sessions: [
-          { title: "Asynchronous API integration and fetching", preview: false, type: "lock" },
-          { title: "Routing and Multi-page layouts in React", preview: false, type: "lock" },
-          { title: "Deploying high-performance web apps to Vercel", preview: false, type: "lock" },
-          { title: "Reviewing, optimizing, and polishing GitHub portfolio", preview: false, type: "lock" }
+          { title: "React Router, Nested & Dynamic Routes", preview: false, type: "lock" },
+          { title: "Context API, Custom Hooks & Project Organization", preview: false, type: "lock" },
+          { title: "CRUD with APIs, Authentication Concepts & Protected Routes", preview: false, type: "lock" },
+          { title: "Capstone Planning, Build & Deployment to Vercel", preview: false, type: "lock" }
         ]
       }
     ],

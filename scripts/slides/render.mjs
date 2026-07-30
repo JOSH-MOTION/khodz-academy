@@ -140,7 +140,7 @@ function pickLayout(slide) {
 
 function renderTitleLayout(slide, meta) {
   return `<div class="layout layout-title">
-    <div class="kicker">LESSON ${meta.lessonNumber} · ${esc(meta.courseTitle)}</div>
+    <div class="kicker">SESSION ${meta.sessionNumber} · ${esc(meta.courseTitle)}</div>
     <h1 class="title-hero">${esc(slide.title)}</h1>
     ${slide.explanation ? `<p class="title-sub">${formatInline(truncate(slide.explanation, 240))}</p>` : ""}
   </div>`;
@@ -421,7 +421,7 @@ html, body {
   <div class="bg-glow"></div>
   <header class="chrome-header">
     <div class="wordmark"><span class="wordmark-dot"></span>KHODZ ACADEMY</div>
-    <div class="badge">WEEK ${meta.weekNumber} · LESSON ${meta.lessonNumber}</div>
+    <div class="badge">WEEK ${meta.weekNumber} · SESSION ${meta.sessionNumber}</div>
   </header>
   <main class="content">
     ${renderContent(slide, diagram, meta)}

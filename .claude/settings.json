@@ -6,7 +6,19 @@
       "Bash(node --env-file=.env scripts/slides/_list_courses.mjs)",
       "Bash(rm -f scripts/slides/_list_courses.mjs)",
       "Bash(node --env-file=.env scripts/slides/_seed_course.mjs)",
-      "Bash(rm -f \"c:/Users/Khodz/Desktop/khodz-academy/scripts/slides/_seed_course.mjs\")"
+      "Bash(rm -f \"c:/Users/Khodz/Desktop/khodz-academy/scripts/slides/_seed_course.mjs\")",
+      "Bash(node --check scripts/slides/generate.mjs)",
+      "Bash(node --check scripts/slides/render.mjs)",
+      "Bash(node scripts/slides/generate.mjs --course=react-development --session=1)",
+      "Bash(node scripts/slides/generate.mjs --course=react-development)",
+      "Bash(rm -f scripts/slides/_seed_course.mjs)",
+      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=vacation-advanced-web-apps --contentSlug=react-development)",
+      "Bash(node --check scripts/slides/lessonFiles.mjs)",
+      "Bash(node scripts/slides/generate.mjs --course=frontend-development --lesson=1)",
+      "Bash(node --env-file=.env scripts/slides/_inspect2.mjs)",
+      "Bash(npx next *)",
+      "Bash(node --env-file=.env scripts/slides/_test_admin_query.mjs)",
+      "Bash(rm -f scripts/slides/_test_admin_query.mjs)"
     ]
   }
 }
