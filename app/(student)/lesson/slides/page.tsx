@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +22,17 @@ interface DbWeek {
   lessons: DbLesson[];
 }
 
+interface SignedSlide {
+  index: number;
+  url: string;
+}
+
+interface Enrolment {
+  tier: string;
+  waterline_week: number;
+  courses?: { title: string };
+}
+
 function LessonSlidesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,12 +41,16 @@ function LessonSlidesContent() {
   const [loading, setLoading] = useState(true);
   const [studentName, setStudentName] = useState("Student");
   const [studentEmail, setStudentEmail] = useState("");
-  
-  const [enrolment, setEnrolment] = useState<any>(null);
+
+  const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
   const [weeks, setWeeks] = useState<DbWeek[]>([]);
   const [currentLesson, setCurrentLesson] = useState<DbLesson | null>(null);
   const [currentWeekNum, setCurrentWeekNum] = useState<number>(1);
   const [courseTitle, setCourseTitle] = useState("Course Content");
+
+  const [slides, setSlides] = useState<SignedSlide[]>([]);
+  const [loadingSlides, setLoadingSlides] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(1);
 
   useEffect(() => {
     const loadData = async () => {
@@ -88,11 +103,12 @@ function LessonSlidesContent() {
         if (weeksError) throw weeksError;
 
         // Sort lessons inside weeks
-        const sortedWeeks = (weeksData || []).map((w: any) => ({
+        type RawWeek = { id: string; week_number: number; title: string; lessons: DbLesson[] | null };
+        const sortedWeeks = ((weeksData || []) as unknown as RawWeek[]).map((w) => ({
           id: w.id,
           week_number: w.week_number,
           title: w.title,
-          lessons: (w.lessons || []).sort((a: any, b: any) => a.order_in_week - b.order_in_week)
+          lessons: (w.lessons || []).slice().sort((a, b) => a.order_in_week - b.order_in_week),
         })) as DbWeek[];
 
         setWeeks(sortedWeeks);
@@ -136,10 +152,52 @@ function LessonSlidesContent() {
     loadData();
   }, [router, activeLessonId]);
 
-  // Convert Google Drive sharing link to embed preview link
+  // Load the real signed slide-deck images for the current lesson
+  useEffect(() => {
+    const lessonId = currentLesson?.id;
+    const loadSlides = async () => {
+      if (!lessonId) {
+        setSlides([]);
+        return;
+      }
+      setLoadingSlides(true);
+      setCurrentSlide(1);
+      try {
+        const res = await fetch(`/api/lessons/${lessonId}/slides`);
+        const json = await res.json();
+        setSlides(json.slides || []);
+      } catch (err) {
+        console.error("Failed to load signed slide URLs:", err);
+        setSlides([]);
+      } finally {
+        setLoadingSlides(false);
+      }
+    };
+    loadSlides();
+  }, [currentLesson]);
+
+  const goNext = useCallback(() => {
+    setCurrentSlide((s) => Math.min(s + 1, slides.length || 1));
+  }, [slides.length]);
+
+  const goPrev = useCallback(() => {
+    setCurrentSlide((s) => Math.max(s - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [goNext, goPrev]);
+
+  // Fallback for lessons that only have the old single-link field, not a
+  // generated deck yet — convert a Google Drive sharing link to an embed URL.
   const getEmbedUrl = (url: string | null) => {
     if (!url) return "";
-    let clean = url.trim();
+    const clean = url.trim();
     if (clean.includes("drive.google.com")) {
       return clean
         .replace(/\/view\??.*/, "/preview")
@@ -157,7 +215,10 @@ function LessonSlidesContent() {
     );
   }
 
-  const embedUrl = getEmbedUrl(currentLesson?.slides_url || null);
+  const totalSlides = slides.length;
+  const progressPercent = totalSlides > 0 ? Math.round((currentSlide / totalSlides) * 100) : 0;
+  const currentImageUrl = slides.find((s) => s.index === currentSlide)?.url;
+  const legacyEmbedUrl = totalSlides === 0 ? getEmbedUrl(currentLesson?.slides_url || null) : "";
 
   return (
     <div className="bg-background text-on-background font-body-md overflow-hidden min-h-screen flex">
@@ -180,10 +241,14 @@ function LessonSlidesContent() {
           </div>
 
           <div className="flex items-center gap-6">
-            <div className="hidden md:flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full border border-white/5">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-              <span className="text-[10px] font-bold text-on-surface uppercase tracking-widest">LIVE SESSION</span>
-            </div>
+            {totalSlides > 0 && (
+              <div className="hidden md:flex items-center gap-2 bg-surface-container-high px-4 py-1.5 rounded-full border border-white/5">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                <span className="text-[10px] font-bold text-on-surface uppercase tracking-widest">
+                  {currentSlide} / {totalSlides}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               <NotificationBell className="text-xl" />
@@ -219,26 +284,60 @@ function LessonSlidesContent() {
             {/* Slide Canvas */}
             <div className="flex-1 flex items-center justify-center p-6 relative z-10">
               <div
-                className="w-full h-full max-w-5xl bg-surface-container border border-white/10 rounded-lg overflow-hidden relative shadow-2xl"
+                className="w-full h-full max-w-5xl bg-surface-container border border-white/10 rounded-lg overflow-hidden relative shadow-2xl group"
                 style={{ boxShadow: "0 0 40px -10px rgba(10, 207, 131, 0.1)" }}
               >
-                {embedUrl ? (
-                  <iframe
-                    src={embedUrl}
-                    className="w-full h-full border-none"
-                    allow="autoplay"
-                  />
+                {loadingSlides ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+                  </div>
+                ) : currentImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img alt="Current slide content" className="w-full h-full object-contain" src={currentImageUrl} />
+                ) : legacyEmbedUrl ? (
+                  <iframe src={legacyEmbedUrl} className="w-full h-full border-none" allow="autoplay" />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-surface-container-low text-on-surface-variant p-6 text-center">
                     <span className="material-symbols-outlined text-5xl text-outline">present_to_all</span>
                     <div>
                       <p className="text-xs font-bold text-white">No Slides Loaded</p>
-                      <p className="text-[10px] mt-1">The instructor hasn&apos;t added slide/PDF links for this lesson yet.</p>
+                      <p className="text-[10px] mt-1">The instructor hasn&apos;t published slides for this lesson yet.</p>
                     </div>
+                  </div>
+                )}
+
+                {totalSlides > 0 && (
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-surface/90 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 transition-opacity group-hover:opacity-100 opacity-60">
+                    <button
+                      onClick={goPrev}
+                      disabled={currentSlide <= 1}
+                      className="text-on-surface hover:text-primary transition-colors flex items-center cursor-pointer disabled:opacity-30"
+                    >
+                      <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <span className="font-bold text-xs text-on-surface px-4 border-x border-white/10">
+                      {currentSlide} / {totalSlides}
+                    </span>
+                    <button
+                      onClick={goNext}
+                      disabled={currentSlide >= totalSlides}
+                      className="text-on-surface hover:text-primary transition-colors flex items-center cursor-pointer disabled:opacity-30"
+                    >
+                      <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+
+            {totalSlides > 0 && (
+              <div className="h-1 bg-surface-container-high w-full flex-shrink-0">
+                <div
+                  className="h-full bg-primary transition-all duration-700"
+                  style={{ width: `${progressPercent}%`, boxShadow: "0 0 10px #45ec9d" }}
+                />
+              </div>
+            )}
           </section>
 
           {/* Lesson List Sidebar */}
@@ -249,8 +348,8 @@ function LessonSlidesContent() {
 
             <div className="flex-1 overflow-y-auto">
               {weeks.map((week) => {
-                const isLocked = enrolment?.tier === "deposited" && week.week_number > enrolment?.waterline_week;
-                
+                const isLocked = enrolment?.tier === "deposited" && week.week_number > (enrolment?.waterline_week ?? 0);
+
                 return (
                   <div key={week.id} className="mb-2">
                     {/* Week header */}
@@ -272,10 +371,10 @@ function LessonSlidesContent() {
                           <Link href="/payment/balance" className="text-primary text-[9px] underline hover:no-underline cursor-pointer">Pay Balance</Link>
                         </div>
                       )}
-                      
+
                       {week.lessons.map((lesson) => {
                         const isSelected = currentLesson?.id === lesson.id;
-                        
+
                         return (
                           <Link
                             key={lesson.id}
