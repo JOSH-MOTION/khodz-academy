@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { COURSES } from "@/lib/courses-data";
+import { CURRENT_COHORT } from "@/lib/cohorts";
 
 export default function CoursesPage() {
   const [filter, setFilter] = useState("All");
@@ -21,6 +22,10 @@ export default function CoursesPage() {
         {/* Header Section */}
         <header className="mb-stack-lg flex flex-col md:flex-row md:items-end justify-between gap-stack-md gap-4 mb-8">
           <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              Admission in Progress — {CURRENT_COHORT}
+            </div>
             <h1 className="font-syne text-display-lg text-primary mb-stack-sm text-3xl font-bold">Our Programmes</h1>
             <p className="text-on-surface-variant text-sm">
               Master the high-performance stack. Intense curriculums designed for software engineers who demand technical mastery.

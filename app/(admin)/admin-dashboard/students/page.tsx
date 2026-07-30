@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import AppSidebar from "@/components/AppSidebar";
 import AdminPinGuard from "@/components/AdminPinGuard";
 import { createClient } from "@/lib/supabase/client";
+import { COHORTS, CURRENT_COHORT } from "@/lib/cohorts";
 
 type Tier = "admitted" | "deposited" | "paid";
 
@@ -115,7 +116,7 @@ export default function AdminStudentsPage() {
     setManaging(student);
     setFormCourseId(enrolment?.courseId || courses[0]?.id || "");
     setFormTier(enrolment?.tier || "paid");
-    setFormCohort(enrolment?.cohort || "");
+    setFormCohort(enrolment?.cohort || CURRENT_COHORT);
   }
 
   async function saveAccess() {
@@ -329,12 +330,18 @@ export default function AdminStudentsPage() {
                 </div>
                 <div className="space-y-2 flex flex-col">
                   <label className="text-on-surface-variant font-semibold">Cohort</label>
-                  <input
+                  <select
                     value={formCohort}
                     onChange={(e) => setFormCohort(e.target.value)}
-                    placeholder="e.g. Cohort 05"
                     className="w-full bg-surface-container-lowest border border-white/10 rounded-lg p-3 outline-none focus:border-primary transition-all text-white"
-                  />
+                  >
+                    <option value="">No cohort assigned</option>
+                    {COHORTS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="pt-2 flex gap-3">

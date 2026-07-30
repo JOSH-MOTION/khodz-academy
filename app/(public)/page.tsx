@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { COURSES } from "@/lib/courses-data";
+import { CURRENT_COHORT } from "@/lib/cohorts";
 
 export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -52,7 +53,7 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 mb-stack-lg animate-fade-in mb-6">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
             <span className="text-label-sm font-bold text-primary uppercase tracking-widest text-[10px]">
-              Next Batch Starting Soon
+              Admission in Progress — {CURRENT_COHORT}
             </span>
           </div>
           <h1 className="font-syne text-display-lg md:text-[80px] font-extrabold text-white leading-none tracking-tight mb-stack-md text-4xl md:text-6xl mb-6">
