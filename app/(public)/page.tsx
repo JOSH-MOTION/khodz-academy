@@ -8,9 +8,7 @@ import { COURSES } from "@/lib/courses-data";
 export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
-  const featuredCourses = COURSES.filter((c) =>
-    ["vacation-web-foundations", "vacation-advanced-web-apps", "mern-engineering"].includes(c.id)
-  );
+  const featuredCourses = COURSES.filter((c) => c.active);
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);

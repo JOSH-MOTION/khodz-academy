@@ -7,6 +7,10 @@ export interface SyllabusModule {
 
 export interface Course {
   id: string;
+  /** True once the course has real published lesson content (slides/video) and should
+   * be shown to students. Courses without this are still in prep — kept in the catalog
+   * data for admin/content-authoring purposes but hidden from public listings. */
+  active?: boolean;
   title: string;
   category: "Beginner" | "Design" | "AI" | "Full Stack";
   duration: string;
@@ -87,6 +91,7 @@ export const COURSES: Course[] = [
   },
   {
     id: "python-fundamentals",
+    active: true,
     title: "Python Fundamentals for Beginners",
     category: "Beginner",
     duration: "2–4 Weeks",
@@ -622,6 +627,7 @@ export const COURSES: Course[] = [
   },
   {
     id: "vacation-web-foundations",
+    active: true,
     title: "Web Foundations (Vacation Coding Program)",
     category: "Beginner",
     duration: "1 Month",
@@ -683,6 +689,7 @@ export const COURSES: Course[] = [
   },
   {
     id: "vacation-advanced-web-apps",
+    active: true,
     title: "Advanced Web Apps (React Foundations)",
     category: "Full Stack",
     duration: "2 Months",

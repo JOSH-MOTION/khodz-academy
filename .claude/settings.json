@@ -25,7 +25,8 @@
       "Bash(grep -n \"python$\\\\|python\\\\`\\\\`\\\\`\" \"content/python-fundamentals/python-lesson-01-getting-started.md\")",
       "Bash(node scripts/slides/generate.mjs --course=frontend-development --session=1)",
       "Bash(node scripts/slides/generate.mjs --course=python-fundamentals)",
-      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=python-fundamentals --contentSlug=python-fundamentals)"
+      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=python-fundamentals --contentSlug=python-fundamentals)",
+      "Bash(node --env-file=.env scripts/slides/_inspect3.mjs)"
     ]
   }
 }

@@ -9,6 +9,7 @@ export default function CoursesPage() {
   const [filter, setFilter] = useState("All");
 
   const filteredCourses = COURSES.filter((course) => {
+    if (!course.active) return false;
     return filter === "All" || course.category === filter;
   });
 
