@@ -15,6 +15,7 @@ interface Submission {
   studentName: string;
   studentEmail: string | null;
   submissionUrl: string;
+  screenshotUrl: string | null;
   status: Status;
   feedback: string | null;
   submittedAt: string;
@@ -247,6 +248,17 @@ export default function AdminAssignmentsPage() {
                   <span className="material-symbols-outlined text-base shrink-0">open_in_new</span>
                   {grading.submissionUrl}
                 </a>
+
+                {grading.screenshotUrl && (
+                  <a href={grading.screenshotUrl} target="_blank" rel="noopener noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={grading.screenshotUrl}
+                      alt="Submission screenshot"
+                      className="w-full max-h-64 object-contain rounded-lg border border-white/10 bg-surface-container-lowest"
+                    />
+                  </a>
+                )}
 
                 <div className="space-y-2 flex flex-col">
                   <label className="text-on-surface-variant font-semibold">Result</label>

@@ -7,6 +7,7 @@ interface SubmissionRow {
   lesson_id: string
   student_id: string
   submission_url: string
+  screenshot_url: string | null
   status: string
   feedback: string | null
   submitted_at: string
@@ -28,7 +29,7 @@ export async function GET() {
   const [{ data: submissions, error: subErr }, { data: usersData, error: usersErr }] = await Promise.all([
     supabase
       .from('assignment_submissions')
-      .select('id, lesson_id, student_id, submission_url, status, feedback, submitted_at, graded_at, lessons(title, assignment_title, week_id)')
+      .select('id, lesson_id, student_id, submission_url, screenshot_url, status, feedback, submitted_at, graded_at, lessons(title, assignment_title, week_id)')
       .order('submitted_at', { ascending: false }),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
@@ -50,6 +51,7 @@ export async function GET() {
       studentName: student?.user_metadata?.full_name || student?.user_metadata?.name || student?.email?.split('@')[0] || 'Student',
       studentEmail: student?.email || null,
       submissionUrl: s.submission_url,
+      screenshotUrl: s.screenshot_url,
       status: s.status,
       feedback: s.feedback,
       submittedAt: s.submitted_at,

@@ -39,7 +39,11 @@ export async function GET() {
   const [{ data: usersData, error: usersErr }, { data: profiles, error: profilesErr }, { data: enrolments, error: enrolErr }, { data: payments, error: payErr }] =
     await Promise.all([
       supabase.auth.admin.listUsers({ perPage: 1000 }),
-      supabase.from('profiles').select('id, role'),
+      supabase
+        .from('profiles')
+        .select(
+          'id, role, full_name, avatar_url, phone, date_of_birth, gender, address, education_background, occupation, emergency_contact_name, emergency_contact_phone, referral_source, motivation, profile_completed'
+        ),
       supabase.from('enrolments').select('id, student_id, course_id, tier, cohort, waterline_week, payment_deadline, created_at, courses(title)'),
       supabase.from('payments').select('id, student_id, course_id, amount, payment_type, paystack_status, paid_at'),
     ])
@@ -50,6 +54,7 @@ export async function GET() {
   if (payErr) return NextResponse.json({ error: payErr.message }, { status: 500 })
 
   const adminIds = new Set((profiles || []).filter((p) => p.role === 'admin').map((p) => p.id))
+  const profileById = new Map((profiles || []).map((p) => [p.id, p]))
   const enrolmentsByStudent = new Map<string, EnrolmentRow[]>()
   for (const e of (enrolments || []) as EnrolmentRow[]) {
     const list = enrolmentsByStudent.get(e.student_id) || []
@@ -65,10 +70,24 @@ export async function GET() {
 
   const students = usersData.users
     .filter((u) => !adminIds.has(u.id))
-    .map((u) => ({
+    .map((u) => {
+      const profile = profileById.get(u.id)
+      return {
       id: u.id,
       email: u.email,
-      name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Student',
+      name: profile?.full_name || u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Student',
+      avatarUrl: profile?.avatar_url || null,
+      phone: profile?.phone || null,
+      dateOfBirth: profile?.date_of_birth || null,
+      gender: profile?.gender || null,
+      address: profile?.address || null,
+      educationBackground: profile?.education_background || null,
+      occupation: profile?.occupation || null,
+      emergencyContactName: profile?.emergency_contact_name || null,
+      emergencyContactPhone: profile?.emergency_contact_phone || null,
+      referralSource: profile?.referral_source || null,
+      motivation: profile?.motivation || null,
+      profileCompleted: profile?.profile_completed ?? null,
       createdAt: u.created_at,
       lastSignInAt: u.last_sign_in_at,
       enrolments: (enrolmentsByStudent.get(u.id) || []).map((e) => {
@@ -99,7 +118,8 @@ export async function GET() {
           status: p.paystack_status,
           paidAt: p.paid_at,
         })),
-    }))
+      }
+    })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return NextResponse.json({ students })

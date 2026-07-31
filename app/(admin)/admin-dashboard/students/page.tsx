@@ -33,6 +33,18 @@ interface Student {
   id: string;
   email: string | null;
   name: string;
+  avatarUrl: string | null;
+  phone: string | null;
+  dateOfBirth: string | null;
+  gender: string | null;
+  address: string | null;
+  educationBackground: string | null;
+  occupation: string | null;
+  emergencyContactName: string | null;
+  emergencyContactPhone: string | null;
+  referralSource: string | null;
+  motivation: string | null;
+  profileCompleted: boolean | null;
   createdAt: string;
   lastSignInAt: string | null;
   enrolments: Enrolment[];
@@ -60,9 +72,11 @@ export default function AdminStudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [cohortFilter, setCohortFilter] = useState("All");
 
+  const [viewing, setViewing] = useState<Student | null>(null);
   const [managing, setManaging] = useState<Student | null>(null);
   const [formCourseId, setFormCourseId] = useState("");
   const [formTier, setFormTier] = useState<Tier>("paid");
@@ -76,9 +90,12 @@ export default function AdminStudentsPage() {
       try {
         const res = await fetch("/api/admin/students");
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
         setStudents(json.students || []);
+        setLoadError("");
       } catch (err) {
         console.error("Failed to load students:", err);
+        setLoadError(err instanceof Error ? err.message : "Failed to load students");
       } finally {
         setLoading(false);
       }
@@ -214,15 +231,23 @@ export default function AdminStudentsPage() {
                     {filtered.map((student) => (
                       <tr key={student.id} className="hover:bg-white/5 transition-colors align-top">
                         <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-xs flex-shrink-0 uppercase">
-                              {student.name.slice(0, 2)}
-                            </div>
+                          <button onClick={() => setViewing(student)} className="flex items-center gap-3 text-left cursor-pointer group">
+                            {student.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={student.avatarUrl} alt={student.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0 border border-white/10" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-xs flex-shrink-0 uppercase">
+                                {student.name.slice(0, 2)}
+                              </div>
+                            )}
                             <div className="min-w-0">
-                              <p className="font-semibold text-xs text-on-surface truncate">{student.name}</p>
+                              <p className="font-semibold text-xs text-on-surface truncate group-hover:text-primary transition-colors">{student.name}</p>
                               <p className="text-[10px] text-on-surface-variant truncate">{student.email}</p>
+                              {student.profileCompleted === false && (
+                                <span className="text-[9px] text-amber-400 font-bold">Admission profile incomplete</span>
+                              )}
                             </div>
-                          </div>
+                          </button>
                         </td>
                         <td className="p-4">
                           {student.enrolments.length === 0 ? (
@@ -287,7 +312,14 @@ export default function AdminStudentsPage() {
                 </table>
               </div>
 
-              {!loading && filtered.length === 0 && (
+              {!loading && loadError && (
+                <div className="py-16 text-center text-error text-xs">
+                  <span className="material-symbols-outlined text-4xl block mb-2 opacity-60">error</span>
+                  <p className="font-bold mb-1">Couldn&apos;t load students</p>
+                  <p className="text-on-surface-variant">{loadError}</p>
+                </div>
+              )}
+              {!loading && !loadError && filtered.length === 0 && (
                 <div className="py-16 text-center text-on-surface-variant text-xs">
                   <span className="material-symbols-outlined text-4xl block mb-2 opacity-30">manage_search</span>
                   {students.length === 0 ? "No students have signed up yet." : "No students match your filters."}
@@ -377,7 +409,60 @@ export default function AdminStudentsPage() {
             </div>
           </div>
         )}
+
+        {viewing && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="glass-card rounded-2xl w-full max-w-lg p-6 inner-glow border border-white/10 relative max-h-[85vh] overflow-y-auto">
+              <button
+                onClick={() => setViewing(null)}
+                className="absolute top-4 right-4 text-on-surface-variant hover:text-white cursor-pointer material-symbols-outlined text-sm"
+              >
+                close
+              </button>
+
+              <div className="flex items-center gap-4 mb-6">
+                {viewing.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={viewing.avatarUrl} alt={viewing.name} className="w-16 h-16 rounded-full object-cover border border-white/10" />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container text-lg uppercase">
+                    {viewing.name.slice(0, 2)}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-syne text-lg font-bold text-white">{viewing.name}</h3>
+                  <p className="text-xs text-on-surface-variant">{viewing.email}</p>
+                  {viewing.profileCompleted === false && (
+                    <span className="text-[9px] text-amber-400 font-bold">Admission profile not yet completed</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <DetailField label="Phone" value={viewing.phone} />
+                <DetailField label="Date of Birth" value={viewing.dateOfBirth ? new Date(viewing.dateOfBirth).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null} />
+                <DetailField label="Gender" value={viewing.gender} />
+                <DetailField label="Occupation" value={viewing.occupation} />
+                <DetailField label="Address" value={viewing.address} full />
+                <DetailField label="Education Background" value={viewing.educationBackground} full />
+                <DetailField label="Emergency Contact" value={viewing.emergencyContactName} />
+                <DetailField label="Emergency Contact Phone" value={viewing.emergencyContactPhone} />
+                <DetailField label="How they heard about us" value={viewing.referralSource} />
+                <DetailField label="Motivation" value={viewing.motivation} full />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminPinGuard>
+  );
+}
+
+function DetailField({ label, value, full = false }: { label: string; value: string | null; full?: boolean }) {
+  return (
+    <div className={`space-y-1 ${full ? "col-span-2" : ""}`}>
+      <p className="text-[9px] text-on-surface-variant uppercase tracking-widest font-bold">{label}</p>
+      <p className="text-on-surface">{value || <span className="text-on-surface-variant italic">Not provided</span>}</p>
+    </div>
   );
 }

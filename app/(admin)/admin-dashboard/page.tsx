@@ -55,6 +55,7 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [animateChart, setAnimateChart] = useState(false);
 
   useEffect(() => {
@@ -62,9 +63,12 @@ export default function AdminDashboardPage() {
       try {
         const res = await fetch("/api/admin/students");
         const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`);
         setStudents(json.students || []);
+        setLoadError("");
       } catch (err) {
         console.error("Failed to load dashboard data:", err);
+        setLoadError(err instanceof Error ? err.message : "Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
@@ -258,7 +262,14 @@ export default function AdminDashboardPage() {
               </table>
             </div>
 
-            {!loading && filteredStudents.length === 0 && (
+            {!loading && loadError && (
+              <div className="py-16 text-center text-error text-xs">
+                <span className="material-symbols-outlined text-4xl block mb-2 opacity-60">error</span>
+                <p className="font-bold mb-1">Couldn&apos;t load dashboard data</p>
+                <p className="text-on-surface-variant">{loadError}</p>
+              </div>
+            )}
+            {!loading && !loadError && filteredStudents.length === 0 && (
               <div className="py-16 text-center text-on-surface-variant text-xs">
                 <span className="material-symbols-outlined text-4xl block mb-2 opacity-30">manage_search</span>
                 {students.length === 0 ? "No students have signed up yet." : "No students match your search."}

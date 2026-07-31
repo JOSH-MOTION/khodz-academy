@@ -80,6 +80,14 @@ function LessonSlidesContent() {
           return;
         }
 
+        // A student who's actually been admitted (has an enrolment) must
+        // complete their profile before reaching lesson content.
+        const { data: profileData } = await supabase.from("profiles").select("profile_completed").eq("id", user.id).maybeSingle();
+        if (profileData?.profile_completed === false) {
+          router.push("/onboarding");
+          return;
+        }
+
         setEnrolments(allEnrolments);
         const enrolData = allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0];
 

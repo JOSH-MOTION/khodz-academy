@@ -23,6 +23,7 @@ type SubmissionStatus = "submitted" | "pass" | "needs_revision";
 
 interface Submission {
   submission_url: string;
+  screenshot_url: string | null;
   status: SubmissionStatus;
   feedback: string | null;
   submitted_at: string;
@@ -62,6 +63,8 @@ function VideoLessonContent() {
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [loadingSubmission, setLoadingSubmission] = useState(false);
   const [submissionUrlInput, setSubmissionUrlInput] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
@@ -88,6 +91,14 @@ function VideoLessonContent() {
         if (enrolError || !allEnrolments || allEnrolments.length === 0) {
           // Redirect to courses if not registered
           router.push("/courses");
+          return;
+        }
+
+        // A student who's actually been admitted (has an enrolment) must
+        // complete their profile before reaching lesson content.
+        const { data: profileData } = await supabase.from("profiles").select("profile_completed").eq("id", user.id).maybeSingle();
+        if (profileData?.profile_completed === false) {
+          router.push("/onboarding");
           return;
         }
 
@@ -187,11 +198,13 @@ function VideoLessonContent() {
         const supabase = createClient();
         const { data } = await supabase
           .from("assignment_submissions")
-          .select("submission_url, status, feedback, submitted_at")
+          .select("submission_url, screenshot_url, status, feedback, submitted_at")
           .eq("lesson_id", lessonId)
           .maybeSingle();
         setSubmission(data || null);
         setSubmissionUrlInput(data?.submission_url || "");
+        setScreenshotFile(null);
+        setScreenshotPreview(null);
       } catch (err) {
         console.error("Failed to load submission:", err);
       } finally {
@@ -205,24 +218,45 @@ function VideoLessonContent() {
     router.push(`/lesson/video?course=${courseId}`);
   };
 
+  const handleScreenshotSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScreenshotFile(file);
+    setScreenshotPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmitAssignment = async () => {
     if (!currentLesson || !submissionUrlInput.trim()) return;
     setSubmitting(true);
     setSubmitError("");
     try {
+      let screenshotUrl = submission?.screenshot_url || null;
+
+      if (screenshotFile) {
+        const uploadForm = new FormData();
+        uploadForm.append("file", screenshotFile);
+        uploadForm.append("lessonId", currentLesson.id);
+        const uploadRes = await fetch("/api/upload/screenshot", { method: "POST", body: uploadForm });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadJson.error || "Screenshot upload failed");
+        screenshotUrl = uploadJson.url;
+      }
+
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: currentLesson.id, submissionUrl: submissionUrlInput.trim() }),
+        body: JSON.stringify({ lessonId: currentLesson.id, submissionUrl: submissionUrlInput.trim(), screenshotUrl }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Submission failed");
       setSubmission({
         submission_url: submissionUrlInput.trim(),
+        screenshot_url: screenshotUrl,
         status: "submitted",
         feedback: null,
         submitted_at: new Date().toISOString(),
       });
+      setScreenshotFile(null);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Submission failed");
     } finally {
@@ -403,14 +437,28 @@ function VideoLessonContent() {
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={submissionUrlInput}
-                        onChange={(e) => setSubmissionUrlInput(e.target.value)}
-                        placeholder="https://github.com/you/project or your deployed link"
-                        className="flex-1 bg-surface-container-lowest border border-white/10 rounded-lg px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
-                      />
+                    <input
+                      type="url"
+                      value={submissionUrlInput}
+                      onChange={(e) => setSubmissionUrlInput(e.target.value)}
+                      placeholder="https://github.com/you/project or your deployed link"
+                      className="w-full bg-surface-container-lowest border border-white/10 rounded-lg px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                    />
+
+                    <div className="flex items-center gap-3">
+                      {(screenshotPreview || submission?.screenshot_url) && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={screenshotPreview || submission?.screenshot_url || ""}
+                          alt="Submission screenshot"
+                          className="w-12 h-12 rounded-lg object-cover border border-white/10"
+                        />
+                      )}
+                      <label className="flex-1 flex items-center justify-center gap-2 bg-surface-container-lowest border border-dashed border-white/20 hover:border-primary text-on-surface-variant hover:text-primary rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors">
+                        <span className="material-symbols-outlined text-base">add_photo_alternate</span>
+                        {screenshotFile ? screenshotFile.name : submission?.screenshot_url ? "Change screenshot" : "Add a screenshot (optional)"}
+                        <input type="file" accept="image/*" onChange={handleScreenshotSelect} className="hidden" />
+                      </label>
                       <button
                         onClick={handleSubmitAssignment}
                         disabled={submitting || !submissionUrlInput.trim()}

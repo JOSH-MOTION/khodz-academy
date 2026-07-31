@@ -11,6 +11,9 @@ import { COURSES, COURSES_MAP } from "@/lib/courses-data";
 
 interface UserProfile {
   role?: string;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  profile_completed?: boolean;
 }
 
 interface Enrolment {
@@ -113,6 +116,8 @@ function StudentDashboardContent() {
           .single();
         if (profileData) {
           setProfile(profileData as UserProfile);
+          if (profileData.full_name) setDisplayName(profileData.full_name);
+          if (profileData.avatar_url) setAvatarUrl(profileData.avatar_url);
         }
 
         // Fetch all enrolments — a student can be enrolled in more than one course
@@ -123,6 +128,14 @@ function StudentDashboardContent() {
         if (allEnrolments && allEnrolments.length > 0) {
           setEnrolments(allEnrolments);
           setEnrolment(allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0]);
+
+          // A student who's actually been admitted (has an enrolment) must
+          // complete their profile before reaching the dashboard. Someone
+          // who signed up but hasn't paid yet is never gated here.
+          if (profileData?.profile_completed === false) {
+            router.push("/onboarding");
+            return;
+          }
         }
 
         // Fetch this student's own payment history (RLS scopes this to their own rows)

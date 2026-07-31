@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { lessonId, submissionUrl } = body || {}
+  const { lessonId, submissionUrl, screenshotUrl } = body || {}
 
   if (!lessonId || !submissionUrl) {
     return NextResponse.json({ error: 'lessonId and submissionUrl are required' }, { status: 400 })
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       lesson_id: lessonId,
       student_id: user.id,
       submission_url: submissionUrl,
+      screenshot_url: screenshotUrl || null,
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       feedback: null,
