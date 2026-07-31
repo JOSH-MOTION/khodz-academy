@@ -31,6 +31,7 @@ function courseTitleOf(courses: EnrolmentRow['courses']) {
 }
 
 export async function GET() {
+  try {
   const admin = await requireAdmin()
   if (!admin.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: admin.status })
 
@@ -123,4 +124,8 @@ export async function GET() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return NextResponse.json({ students })
+  } catch (err) {
+    console.error('GET /api/admin/students failed:', err)
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Internal server error' }, { status: 500 })
+  }
 }
