@@ -7,7 +7,7 @@ import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import CourseSwitcher from "@/components/CourseSwitcher";
 import { createClient } from "@/lib/supabase/client";
-import { COURSES } from "@/lib/courses-data";
+import { COURSES, COURSES_MAP } from "@/lib/courses-data";
 
 interface UserProfile {
   role?: string;
@@ -35,6 +35,26 @@ const TIER_COLOR: Record<string, string> = {
   paid: "bg-primary/20 text-primary border-primary/30",
 };
 
+interface Payment {
+  course_id: string | null;
+  amount: number;
+  payment_type: string;
+  paid_at: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  courses?: { title: string } | { title: string }[] | null;
+}
+
+function announcementCourseTitle(courses: Announcement["courses"]) {
+  if (!courses) return null;
+  return Array.isArray(courses) ? courses[0]?.title ?? null : courses.title;
+}
+
 function StudentDashboardContent() {
   const searchParams = useSearchParams();
   const requestedCourseId = searchParams.get("course");
@@ -42,6 +62,8 @@ function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
   const [enrolment, setEnrolment] = useState<Enrolment | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentTime, setCurrentTime] = useState<string>("");
 
   // Live ticking clock
@@ -102,6 +124,22 @@ function StudentDashboardContent() {
           setEnrolments(allEnrolments);
           setEnrolment(allEnrolments.find((e) => e.course_id === requestedCourseId) || allEnrolments[0]);
         }
+
+        // Fetch this student's own payment history (RLS scopes this to their own rows)
+        const { data: paymentsData } = await supabase
+          .from("payments")
+          .select("course_id, amount, payment_type, paid_at")
+          .eq("student_id", user.id);
+        setPayments(paymentsData || []);
+
+        // Fetch announcements relevant to this student (RLS scopes to
+        // global announcements + ones for courses they're enrolled in)
+        const { data: announcementsData } = await supabase
+          .from("announcements")
+          .select("id, title, body, created_at, courses(title)")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        setAnnouncements(announcementsData || []);
       } else {
         router.push(`/auth/login?next=${encodeURIComponent("/student-dashboard")}`);
       }
@@ -190,6 +228,29 @@ function StudentDashboardContent() {
           </header>
 
           <div className="p-gutter max-w-container-max mx-auto space-y-stack-lg p-6 space-y-6 max-w-[1280px]">
+            {/* Announcements */}
+            {announcements.length > 0 && (
+              <section className="space-y-3">
+                {announcements.map((a) => (
+                  <div key={a.id} className="glass-card rounded-xl p-4 border border-primary/20 flex gap-3 items-start">
+                    <span className="material-symbols-outlined text-primary text-xl shrink-0">campaign</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-syne text-xs font-bold text-on-surface">{a.title}</h4>
+                        <span className="text-[9px] text-on-surface-variant border border-white/10 px-1.5 py-0.5 rounded-full">
+                          {announcementCourseTitle(a.courses) || "All Courses"}
+                        </span>
+                        <span className="text-[9px] text-on-surface-variant">
+                          {new Date(a.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant mt-1 whitespace-pre-wrap">{a.body}</p>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
+
             {/* Your Courses */}
             <section>
               <h3 className="font-syne text-headline-md text-on-surface mb-stack-md mb-4 text-lg font-semibold">
@@ -207,7 +268,11 @@ function StudentDashboardContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md gap-4">
-                  {visibleEnrolments.map((e) => (
+                  {visibleEnrolments.map((e) => {
+                    const totalPriceGhs = COURSES_MAP[e.course_id]?.totalGhs ?? null;
+                    const amountPaid = payments.filter((p) => p.course_id === e.course_id).reduce((sum, p) => sum + Number(p.amount), 0);
+                    const remainingGhs = totalPriceGhs !== null ? Math.max(0, totalPriceGhs - amountPaid) : null;
+                    return (
                     <div key={e.course_id} className="glass-card rounded-xl p-stack-lg p-6 inner-glow flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-3">
                         <h4 className="font-syne text-headline-md text-on-surface text-base font-bold leading-tight">
@@ -232,6 +297,24 @@ function StudentDashboardContent() {
                         )}
                       </div>
 
+                      {totalPriceGhs !== null && (
+                        <div className="bg-surface-container-low rounded-lg p-3 space-y-1.5">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-on-surface-variant">Amount Paid</span>
+                            <span className="text-on-surface font-bold">GHS {amountPaid.toLocaleString()} / {totalPriceGhs.toLocaleString()}</span>
+                          </div>
+                          <div className="h-1.5 bg-surface-variant rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all"
+                              style={{ width: `${totalPriceGhs > 0 ? Math.min(100, (amountPaid / totalPriceGhs) * 100) : 0}%` }}
+                            />
+                          </div>
+                          {remainingGhs !== null && remainingGhs > 0 && (
+                            <p className="text-[9px] text-amber-400 font-bold">GHS {remainingGhs.toLocaleString()} remaining</p>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex gap-3 mt-2">
                         <Link
                           href={`/lesson/video?course=${e.course_id}`}
@@ -247,7 +330,8 @@ function StudentDashboardContent() {
                         </Link>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>

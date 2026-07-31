@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin'
 import { createServiceClient } from '@/lib/supabase/server'
+import { COURSES_MAP } from '@/lib/courses-data'
 
 interface EnrolmentRow {
   id: string
@@ -17,6 +18,7 @@ interface EnrolmentRow {
 interface PaymentRow {
   id: string
   student_id: string
+  course_id: string | null
   amount: number
   payment_type: string
   paystack_status: string
@@ -39,7 +41,7 @@ export async function GET() {
       supabase.auth.admin.listUsers({ perPage: 1000 }),
       supabase.from('profiles').select('id, role'),
       supabase.from('enrolments').select('id, student_id, course_id, tier, cohort, waterline_week, payment_deadline, created_at, courses(title)'),
-      supabase.from('payments').select('id, student_id, amount, payment_type, paystack_status, paid_at'),
+      supabase.from('payments').select('id, student_id, course_id, amount, payment_type, paystack_status, paid_at'),
     ])
 
   if (usersErr) return NextResponse.json({ error: usersErr.message }, { status: 500 })
@@ -69,19 +71,29 @@ export async function GET() {
       name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Student',
       createdAt: u.created_at,
       lastSignInAt: u.last_sign_in_at,
-      enrolments: (enrolmentsByStudent.get(u.id) || []).map((e) => ({
-        id: e.id,
-        courseId: e.course_id,
-        courseTitle: courseTitleOf(e.courses),
-        tier: e.tier,
-        cohort: e.cohort,
-        waterlineWeek: e.waterline_week,
-        paymentDeadline: e.payment_deadline,
-        enrolledAt: e.created_at,
-      })),
+      enrolments: (enrolmentsByStudent.get(u.id) || []).map((e) => {
+        const totalPriceGhs = COURSES_MAP[e.course_id]?.totalGhs ?? null
+        const amountPaid = (paymentsByStudent.get(u.id) || [])
+          .filter((p) => p.course_id === e.course_id)
+          .reduce((sum, p) => sum + Number(p.amount), 0)
+        return {
+          id: e.id,
+          courseId: e.course_id,
+          courseTitle: courseTitleOf(e.courses),
+          tier: e.tier,
+          cohort: e.cohort,
+          waterlineWeek: e.waterline_week,
+          paymentDeadline: e.payment_deadline,
+          enrolledAt: e.created_at,
+          amountPaid,
+          totalPriceGhs,
+          remainingGhs: totalPriceGhs !== null ? Math.max(0, totalPriceGhs - amountPaid) : null,
+        }
+      }),
       payments: (paymentsByStudent.get(u.id) || [])
         .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
         .map((p) => ({
+          courseId: p.course_id,
           amount: p.amount,
           paymentType: p.payment_type,
           status: p.paystack_status,

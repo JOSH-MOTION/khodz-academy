@@ -17,6 +17,9 @@ interface Enrolment {
   waterlineWeek: number;
   paymentDeadline: string | null;
   enrolledAt: string;
+  amountPaid: number;
+  totalPriceGhs: number | null;
+  remainingGhs: number | null;
 }
 
 interface Payment {
@@ -225,22 +228,32 @@ export default function AdminStudentsPage() {
                           {student.enrolments.length === 0 ? (
                             <span className="text-[10px] text-on-surface-variant italic">No course yet</span>
                           ) : (
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-2">
                               {student.enrolments.map((e) => (
                                 <button
                                   key={e.id}
                                   onClick={() => openManage(student, e)}
-                                  className="flex items-center gap-2 text-left cursor-pointer group"
+                                  className="flex flex-col items-start gap-1 text-left cursor-pointer group"
                                   title="Edit this enrolment"
                                 >
-                                  <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${TIER_COLOR[e.tier]}`}>
-                                    {TIER_LABEL[e.tier]}
-                                  </span>
-                                  <span className="text-[11px] text-on-surface group-hover:text-primary transition-colors truncate">
-                                    {e.courseTitle || e.courseId}
-                                  </span>
-                                  {e.cohort && (
-                                    <span className="text-[9px] text-on-surface-variant border border-white/10 px-1.5 rounded">{e.cohort}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${TIER_COLOR[e.tier]}`}>
+                                      {TIER_LABEL[e.tier]}
+                                    </span>
+                                    <span className="text-[11px] text-on-surface group-hover:text-primary transition-colors truncate">
+                                      {e.courseTitle || e.courseId}
+                                    </span>
+                                    {e.cohort && (
+                                      <span className="text-[9px] text-on-surface-variant border border-white/10 px-1.5 rounded">{e.cohort}</span>
+                                    )}
+                                  </div>
+                                  {e.totalPriceGhs !== null && (
+                                    <span className="text-[9px] text-on-surface-variant">
+                                      GHS {e.amountPaid.toLocaleString()} / {e.totalPriceGhs.toLocaleString()} paid
+                                      {e.remainingGhs !== null && e.remainingGhs > 0 && (
+                                        <span className="text-amber-400"> · {e.remainingGhs.toLocaleString()} remaining</span>
+                                      )}
+                                    </span>
                                   )}
                                 </button>
                               ))}

@@ -37,7 +37,8 @@ export async function POST(request: Request) {
   // 2. Log the payment
   await supabase.from('payments').insert({
     student_id: studentId,
-    amount: amount,
+    course_id: courseId,
+    amount: amountPaidGhs,
     payment_type: paymentType,
     paystack_ref: reference,
     paystack_status: 'success',

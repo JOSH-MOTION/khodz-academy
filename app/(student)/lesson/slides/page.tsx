@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -42,7 +42,6 @@ function LessonSlidesContent() {
   const requestedCourseId = searchParams.get("course");
 
   const [loading, setLoading] = useState(true);
-  const [studentName, setStudentName] = useState("Student");
   const [studentEmail, setStudentEmail] = useState("");
 
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
@@ -55,6 +54,8 @@ function LessonSlidesContent() {
   const [slides, setSlides] = useState<SignedSlide[]>([]);
   const [loadingSlides, setLoadingSlides] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const slideContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -66,7 +67,6 @@ function LessonSlidesContent() {
           return;
         }
 
-        setStudentName(user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Student");
         setStudentEmail(user.email || "");
 
         // 1. Fetch all enrolments — a student can be enrolled in more than one course
@@ -198,6 +198,20 @@ function LessonSlidesContent() {
     return () => window.removeEventListener("keydown", handler);
   }, [goNext, goPrev]);
 
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      slideContainerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
   const handleSwitchCourse = (courseId: string) => {
     router.push(`/lesson/slides?course=${courseId}`);
   };
@@ -275,27 +289,13 @@ function LessonSlidesContent() {
           {/* Slide Viewer Area */}
           <section className="flex-1 flex flex-col relative bg-surface-container-lowest">
 
-            {/* Watermark Layer */}
-            <div
-              className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(-45deg, transparent, transparent 150px, rgba(255,255,255,0.015) 150px, rgba(255,255,255,0.015) 300px)",
-              }}
-            >
-              <div className="grid grid-cols-3 gap-32 rotate-12 transform scale-150 select-none">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <span key={i} className="text-on-surface-variant font-bold text-[9px] whitespace-nowrap opacity-25">
-                    {studentName} - {studentEmail}
-                  </span>
-                ))}
-              </div>
-            </div>
-
             {/* Slide Canvas */}
             <div className="flex-1 flex items-center justify-center p-6 relative z-10">
               <div
-                className="w-full h-full max-w-5xl bg-surface-container border border-white/10 rounded-lg overflow-hidden relative shadow-2xl group"
+                ref={slideContainerRef}
+                className={`bg-surface-container overflow-hidden relative shadow-2xl group ${
+                  isFullscreen ? "w-screen h-screen" : "w-full h-full max-w-5xl border border-white/10 rounded-lg"
+                }`}
                 style={{ boxShadow: "0 0 40px -10px rgba(10, 207, 131, 0.1)" }}
               >
                 {loadingSlides ? (
@@ -335,6 +335,13 @@ function LessonSlidesContent() {
                       className="text-on-surface hover:text-primary transition-colors flex items-center cursor-pointer disabled:opacity-30"
                     >
                       <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
+                    <button
+                      onClick={toggleFullscreen}
+                      className="ml-2 text-on-surface hover:text-primary transition-colors flex items-center cursor-pointer"
+                      title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                    >
+                      <span className="material-symbols-outlined">{isFullscreen ? "fullscreen_exit" : "fullscreen"}</span>
                     </button>
                   </div>
                 )}

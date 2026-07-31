@@ -33,7 +33,9 @@
       "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/lessons/[lessonId]\" \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/submissions\" \"c:/Users/Khodz/Desktop/khodz-academy/app/api/submissions\" \"c:/Users/Khodz/Desktop/khodz-academy/app/\\(admin\\)/admin-dashboard/assignments\")",
       "Bash(grep -n \"Slides input\\\\|</div>$\" \"app/\\(admin\\)/admin-dashboard/courses/page.tsx\")",
       "Bash(node --env-file=.env scripts/slides/_check_assignments.mjs)",
-      "Bash(rm -f scripts/slides/_check_assignments.mjs)"
+      "Bash(rm -f scripts/slides/_check_assignments.mjs)",
+      "Bash(node --env-file=.env scripts/slides/_check_migration7.mjs)",
+      "Bash(rm -f scripts/slides/_check_migration7.mjs)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons"
