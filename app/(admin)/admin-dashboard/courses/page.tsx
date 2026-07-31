@@ -22,6 +22,9 @@ interface Lesson {
   title: string;
   video_url: string | null;
   slides_url: string | null;
+  assignment_title: string | null;
+  assignment_description: string | null;
+  assignment_due_at: string | null;
   order_in_week: number;
 }
 
@@ -30,6 +33,14 @@ interface WeekWithLessons {
   week_number: number;
   title: string;
   lessons: Lesson[];
+}
+
+interface LessonEditState {
+  video: string;
+  slides: string;
+  assignmentTitle: string;
+  assignmentDescription: string;
+  assignmentDueAt: string;
 }
 
 export default function AdminCoursesPage() {
@@ -42,7 +53,7 @@ export default function AdminCoursesPage() {
   const [weeks, setWeeks] = useState<WeekWithLessons[]>([]);
   const [loadingWeeks, setLoadingWeeks] = useState(false);
   const [savingLessonId, setSavingLessonId] = useState<string | null>(null);
-  const [editUrls, setEditUrls] = useState<Record<string, { video: string; slides: string }>>({});
+  const [editUrls, setEditUrls] = useState<Record<string, LessonEditState>>({});
 
   const filtered = courses.filter((c) => {
     const matchCat = filter === "All" || c.category === filter;
@@ -83,6 +94,9 @@ export default function AdminCoursesPage() {
             title,
             video_url,
             slides_url,
+            assignment_title,
+            assignment_description,
+            assignment_due_at,
             order_in_week
           )
         `)
@@ -105,12 +119,15 @@ export default function AdminCoursesPage() {
       setWeeks(typedWeeks);
 
       // Initialize form state
-      const initialUrls: Record<string, { video: string; slides: string }> = {};
+      const initialUrls: Record<string, LessonEditState> = {};
       typedWeeks.forEach(w => {
         w.lessons.forEach(l => {
           initialUrls[l.id] = {
             video: l.video_url || "",
-            slides: l.slides_url || ""
+            slides: l.slides_url || "",
+            assignmentTitle: l.assignment_title || "",
+            assignmentDescription: l.assignment_description || "",
+            assignmentDueAt: l.assignment_due_at ? l.assignment_due_at.slice(0, 10) : "",
           };
         });
       });
@@ -124,37 +141,47 @@ export default function AdminCoursesPage() {
     }
   };
 
-  // Save lesson URLs
+  // Save lesson URLs + assignment via the admin API (service role — lessons
+  // has no client-side UPDATE policy, so a direct Supabase client call here
+  // would always fail silently against RLS).
   const saveUrls = async (lessonId: string) => {
     setSavingLessonId(lessonId);
     try {
-      const supabase = createClient();
-      const urls = editUrls[lessonId] || { video: "", slides: "" };
-      
-      const { error } = await supabase
-        .from("lessons")
-        .update({
-          video_url: urls.video || null,
-          slides_url: urls.slides || null
-        })
-        .eq("id", lessonId);
+      const urls = editUrls[lessonId] || {
+        video: "", slides: "", assignmentTitle: "", assignmentDescription: "", assignmentDueAt: "",
+      };
 
-      if (error) throw error;
-      
+      const res = await fetch(`/api/admin/lessons/${lessonId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          video_url: urls.video || null,
+          slides_url: urls.slides || null,
+          assignment_title: urls.assignmentTitle || null,
+          assignment_description: urls.assignmentDescription || null,
+          assignment_due_at: urls.assignmentDueAt ? new Date(urls.assignmentDueAt).toISOString() : null,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Save failed");
+
       // Update local weeks state
       setWeeks(prev => prev.map(w => ({
         ...w,
         lessons: w.lessons.map(l => l.id === lessonId ? {
           ...l,
           video_url: urls.video || null,
-          slides_url: urls.slides || null
+          slides_url: urls.slides || null,
+          assignment_title: urls.assignmentTitle || null,
+          assignment_description: urls.assignmentDescription || null,
+          assignment_due_at: urls.assignmentDueAt ? new Date(urls.assignmentDueAt).toISOString() : null,
         } : l)
       })));
 
       alert("Lesson materials successfully updated!");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to update lesson:", err);
-      alert("Save failed: " + err.message);
+      alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setSavingLessonId(null);
     }
@@ -428,6 +455,54 @@ export default function AdminCoursesPage() {
                                   className="bg-transparent border-none text-xs w-full text-on-surface outline-none focus:ring-0"
                                 />
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Assignment fields */}
+                          <div className="border-t border-white/5 pt-3 space-y-3">
+                            <label className="text-[10px] text-primary font-bold uppercase flex items-center gap-1.5">
+                              <span className="material-symbols-outlined text-xs">assignment</span>
+                              Assignment (optional)
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-on-surface-variant font-bold uppercase">Title</label>
+                                <input
+                                  type="text"
+                                  value={editUrls[lesson.id]?.assignmentTitle || ""}
+                                  onChange={(e) => setEditUrls({
+                                    ...editUrls,
+                                    [lesson.id]: { ...editUrls[lesson.id], assignmentTitle: e.target.value }
+                                  })}
+                                  placeholder="e.g. Build a Counter App"
+                                  className="bg-background border border-white/10 rounded px-2.5 py-1.5 text-xs w-full text-on-surface outline-none focus:border-primary focus:ring-0"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] text-on-surface-variant font-bold uppercase">Due Date</label>
+                                <input
+                                  type="date"
+                                  value={editUrls[lesson.id]?.assignmentDueAt || ""}
+                                  onChange={(e) => setEditUrls({
+                                    ...editUrls,
+                                    [lesson.id]: { ...editUrls[lesson.id], assignmentDueAt: e.target.value }
+                                  })}
+                                  className="bg-background border border-white/10 rounded px-2.5 py-1.5 text-xs w-full text-on-surface outline-none focus:border-primary focus:ring-0"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] text-on-surface-variant font-bold uppercase">Description / Instructions</label>
+                              <textarea
+                                value={editUrls[lesson.id]?.assignmentDescription || ""}
+                                onChange={(e) => setEditUrls({
+                                  ...editUrls,
+                                  [lesson.id]: { ...editUrls[lesson.id], assignmentDescription: e.target.value }
+                                })}
+                                placeholder="What should the student build/submit? Paste a link to your GitHub repo or deployed site when done."
+                                rows={2}
+                                className="bg-background border border-white/10 rounded px-2.5 py-1.5 text-xs w-full text-on-surface outline-none focus:border-primary focus:ring-0 resize-none"
+                              />
                             </div>
                           </div>
                         </div>

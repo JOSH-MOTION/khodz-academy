@@ -13,7 +13,19 @@ interface DbLesson {
   title: string;
   video_url: string | null;
   slides_url: string | null;
+  assignment_title: string | null;
+  assignment_description: string | null;
+  assignment_due_at: string | null;
   order_in_week: number;
+}
+
+type SubmissionStatus = "submitted" | "pass" | "needs_revision";
+
+interface Submission {
+  submission_url: string;
+  status: SubmissionStatus;
+  feedback: string | null;
+  submitted_at: string;
 }
 
 interface DbWeek {
@@ -46,6 +58,12 @@ function VideoLessonContent() {
   const [currentLesson, setCurrentLesson] = useState<DbLesson | null>(null);
   const [currentWeekNum, setCurrentWeekNum] = useState<number>(1);
   const [courseTitle, setCourseTitle] = useState("Course Content");
+
+  const [submission, setSubmission] = useState<Submission | null>(null);
+  const [loadingSubmission, setLoadingSubmission] = useState(false);
+  const [submissionUrlInput, setSubmissionUrlInput] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -92,6 +110,9 @@ function VideoLessonContent() {
               title,
               video_url,
               slides_url,
+              assignment_title,
+              assignment_description,
+              assignment_due_at,
               order_in_week
             )
           `)
@@ -152,8 +173,61 @@ function VideoLessonContent() {
     loadData();
   }, [router, activeLessonId, requestedCourseId]);
 
+  // Load the student's own submission (if any) for the current lesson's assignment
+  useEffect(() => {
+    const lessonId = currentLesson?.id;
+    const hasAssignment = !!currentLesson?.assignment_title;
+    const loadSubmission = async () => {
+      if (!lessonId || !hasAssignment) {
+        setSubmission(null);
+        return;
+      }
+      setLoadingSubmission(true);
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("assignment_submissions")
+          .select("submission_url, status, feedback, submitted_at")
+          .eq("lesson_id", lessonId)
+          .maybeSingle();
+        setSubmission(data || null);
+        setSubmissionUrlInput(data?.submission_url || "");
+      } catch (err) {
+        console.error("Failed to load submission:", err);
+      } finally {
+        setLoadingSubmission(false);
+      }
+    };
+    loadSubmission();
+  }, [currentLesson]);
+
   const handleSwitchCourse = (courseId: string) => {
     router.push(`/lesson/video?course=${courseId}`);
+  };
+
+  const handleSubmitAssignment = async () => {
+    if (!currentLesson || !submissionUrlInput.trim()) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const res = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: currentLesson.id, submissionUrl: submissionUrlInput.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Submission failed");
+      setSubmission({
+        submission_url: submissionUrlInput.trim(),
+        status: "submitted",
+        feedback: null,
+        submitted_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Submission failed");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Convert Google Drive sharing link to embed preview link
@@ -277,6 +351,79 @@ function VideoLessonContent() {
                 <p className="text-xs italic">&ldquo;Pause, take notes, and build the concepts locally on your computer. Coding is learned by writing code.&rdquo;</p>
               </div>
             </article>
+
+            {/* Assignment */}
+            {currentLesson?.assignment_title && (
+              <div className="bg-surface-container rounded-xl border border-white/10 p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-primary text-[10px] font-bold uppercase tracking-widest mb-1">
+                      <span className="material-symbols-outlined text-sm">assignment</span> Assignment
+                    </div>
+                    <h3 className="font-syne font-bold text-sm text-on-surface">{currentLesson.assignment_title}</h3>
+                  </div>
+                  {currentLesson.assignment_due_at && (
+                    <span className="text-[10px] text-on-surface-variant border border-white/10 px-2 py-1 rounded-full whitespace-nowrap">
+                      Due {new Date(currentLesson.assignment_due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                </div>
+
+                {currentLesson.assignment_description && (
+                  <p className="text-xs text-on-surface-variant leading-relaxed">{currentLesson.assignment_description}</p>
+                )}
+
+                {loadingSubmission ? (
+                  <span className="material-symbols-outlined text-primary text-xl animate-spin block">progress_activity</span>
+                ) : (
+                  <div className="space-y-3">
+                    {submission && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase border ${
+                            submission.status === "pass"
+                              ? "bg-primary/20 text-primary border-primary/30"
+                              : submission.status === "needs_revision"
+                              ? "bg-error/20 text-error border-error/30"
+                              : "bg-tertiary/20 text-tertiary border-tertiary/30"
+                          }`}
+                        >
+                          {submission.status === "pass" ? "Pass" : submission.status === "needs_revision" ? "Needs Revision" : "Awaiting Review"}
+                        </span>
+                        <a href={submission.submission_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-primary underline hover:no-underline break-all">
+                          {submission.submission_url}
+                        </a>
+                      </div>
+                    )}
+
+                    {submission?.feedback && (
+                      <div className="bg-surface-container-low p-3 rounded-lg border-l-2 border-primary/40">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Instructor Feedback</p>
+                        <p className="text-xs text-on-surface-variant">{submission.feedback}</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={submissionUrlInput}
+                        onChange={(e) => setSubmissionUrlInput(e.target.value)}
+                        placeholder="https://github.com/you/project or your deployed link"
+                        className="flex-1 bg-surface-container-lowest border border-white/10 rounded-lg px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                      <button
+                        onClick={handleSubmitAssignment}
+                        disabled={submitting || !submissionUrlInput.trim()}
+                        className="bg-primary text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {submitting ? "Submitting…" : submission ? "Resubmit" : "Submit"}
+                      </button>
+                    </div>
+                    {submitError && <p className="text-[10px] text-error font-bold">{submitError}</p>}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Course Content Sidebar */}

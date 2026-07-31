@@ -26,6 +26,7 @@ const adminMenu = [
   { id: "slides",          label: "Slides",     icon: "present_to_all",    href: "/admin-dashboard/slides" },
   { id: "videos",          label: "Videos",     icon: "play_circle",       href: "/admin-dashboard/video" },
   { id: "students",        label: "Students",   icon: "group",             href: "/admin-dashboard/students" },
+  { id: "assignments",     label: "Assignments", icon: "assignment_turned_in", href: "/admin-dashboard/assignments" },
   { id: "settings",        label: "Settings",   icon: "settings",          href: "/admin-dashboard/settings" },
 ];
 

@@ -29,7 +29,14 @@
       "Bash(node --env-file=.env scripts/slides/_inspect3.mjs)",
       "Bash(grep -n 'href={`/lesson/slides?id=\\\\|href={isLocked ? \"#\" : `/lesson/slides' \"app/\\(student\\)/lesson/slides/page.tsx\")",
       "Bash(grep -n 'href={`/lesson/video?id=\\\\|href={`/lesson/slides?id=' \"app/\\(student\\)/lesson/video/page.tsx\")",
-      "Bash(grep -n \"Dashboard Bento Grid\\\\|Specialized Tracks Section\\\\|^            </div>$\\\\|^            </section>$\" \"app/\\(student\\)/student-dashboard/page.tsx\")"
+      "Bash(grep -n \"Dashboard Bento Grid\\\\|Specialized Tracks Section\\\\|^            </div>$\\\\|^            </section>$\" \"app/\\(student\\)/student-dashboard/page.tsx\")",
+      "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/lessons/[lessonId]\" \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/submissions\" \"c:/Users/Khodz/Desktop/khodz-academy/app/api/submissions\" \"c:/Users/Khodz/Desktop/khodz-academy/app/\\(admin\\)/admin-dashboard/assignments\")",
+      "Bash(grep -n \"Slides input\\\\|</div>$\" \"app/\\(admin\\)/admin-dashboard/courses/page.tsx\")",
+      "Bash(node --env-file=.env scripts/slides/_check_assignments.mjs)",
+      "Bash(rm -f scripts/slides/_check_assignments.mjs)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons"
     ]
   }
 }
