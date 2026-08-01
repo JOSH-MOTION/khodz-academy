@@ -43,7 +43,9 @@
       "Bash(node --env-file=.env scripts/slides/_debug_students.mjs)",
       "Bash(rm -f scripts/slides/_debug_students.mjs)",
       "Bash(node --env-file=.env scripts/slides/_check_migration9.mjs)",
-      "Bash(rm -f scripts/slides/_check_migration9.mjs)"
+      "Bash(rm -f scripts/slides/_check_migration9.mjs)",
+      "Bash(git fetch *)",
+      "WebFetch(domain:khodz-academy-yb7f.vercel.app)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons"
