@@ -62,6 +62,9 @@ export default function AdminCoursesPage() {
   const [endDate, setEndDate] = useState("");
   const [depositPercent, setDepositPercent] = useState(50);
   const [reminderLeadDays, setReminderLeadDays] = useState(21);
+  const [admissionGhs, setAdmissionGhs] = useState("");
+  const [tuitionGhs, setTuitionGhs] = useState("");
+  const [promoPriceGhs, setPromoPriceGhs] = useState("");
 
   const filtered = courses.filter((c) => {
     const matchCat = filter === "All" || c.category === filter;
@@ -203,13 +206,16 @@ export default function AdminCoursesPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("courses")
-        .select("end_date, deposit_percent, reminder_lead_days")
+        .select("end_date, deposit_percent, reminder_lead_days, admission_ghs, tuition_ghs, promo_price_ghs")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;
       setEndDate(data?.end_date || "");
       setDepositPercent(data?.deposit_percent ?? 50);
       setReminderLeadDays(data?.reminder_lead_days ?? 21);
+      setAdmissionGhs(data?.admission_ghs != null ? String(data.admission_ghs) : "");
+      setTuitionGhs(data?.tuition_ghs != null ? String(data.tuition_ghs) : "");
+      setPromoPriceGhs(data?.promo_price_ghs != null ? String(data.promo_price_ghs) : "");
     } catch (err) {
       console.error("Failed to load course settings:", err);
       alert("Error loading course settings.");
@@ -225,7 +231,14 @@ export default function AdminCoursesPage() {
       const res = await fetch(`/api/admin/courses/${settingsCourse.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endDate: endDate || null, depositPercent, reminderLeadDays }),
+        body: JSON.stringify({
+          endDate: endDate || null,
+          depositPercent,
+          reminderLeadDays,
+          admissionGhs: admissionGhs === "" ? "" : Number(admissionGhs),
+          tuitionGhs: tuitionGhs === "" ? "" : Number(tuitionGhs),
+          promoPriceGhs: promoPriceGhs === "" ? "" : Number(promoPriceGhs),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Save failed");
@@ -360,10 +373,11 @@ export default function AdminCoursesPage() {
                           </button>
                           <button
                             onClick={() => openSettingsModal(course.id, course.title)}
-                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                            title="Deposit & Deadline Settings"
+                            className="p-1.5 hover:bg-primary/20 rounded text-primary border border-primary/20 hover:border-primary transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                            title="Pricing, Deposit & Deadline Settings"
                           >
-                            <span className="material-symbols-outlined text-base">tune</span>
+                            <span className="material-symbols-outlined text-xs">payments</span>
+                            Pricing
                           </button>
                           <Link
                             href={`/courses/${course.id}`}
@@ -590,9 +604,9 @@ export default function AdminCoursesPage() {
           <div className="bg-surface-container border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-surface-container-highest">
               <div>
-                <h3 className="font-syne text-md font-bold text-primary">Deposit & Deadline: {settingsCourse.title}</h3>
+                <h3 className="font-syne text-md font-bold text-primary">Pricing & Deadlines: {settingsCourse.title}</h3>
                 <p className="text-[10px] text-on-surface-variant mt-1">
-                  Controls the deposit price and when unpaid students get reminded before losing access.
+                  Controls admission fee, tuition, promo price, deposit, and when unpaid students get reminded before losing access.
                 </p>
               </div>
               <button
@@ -610,6 +624,48 @@ export default function AdminCoursesPage() {
                 </div>
               ) : (
                 <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-on-surface-variant font-bold uppercase">Admission Fee (GHS)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={admissionGhs}
+                        onChange={(e) => setAdmissionGhs(e.target.value)}
+                        placeholder="e.g. 200"
+                        className="w-full bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                      <p className="text-[9px] text-on-surface-variant">Non-refundable. Paid to secure a seat before class starts.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] text-on-surface-variant font-bold uppercase">Tuition Fee (GHS)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={tuitionGhs}
+                        onChange={(e) => setTuitionGhs(e.target.value)}
+                        placeholder="e.g. 1500"
+                        className="w-full bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                      <p className="text-[9px] text-on-surface-variant">Full course tuition, paid as deposit + balance.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-on-surface-variant font-bold uppercase">Promo Price (GHS) — optional</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={promoPriceGhs}
+                      onChange={(e) => setPromoPriceGhs(e.target.value)}
+                      placeholder="Leave blank for no promo"
+                      className="w-full bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                    />
+                    <p className="text-[9px] text-on-surface-variant">
+                      When set, shown as a discounted all-in price (admission + tuition) on the course page and used for one-time full-payment checkout.
+                    </p>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-[10px] text-on-surface-variant font-bold uppercase">Cohort End Date</label>
                     <input

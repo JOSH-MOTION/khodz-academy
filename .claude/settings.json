@@ -46,7 +46,10 @@
       "Bash(rm -f scripts/slides/_check_migration9.mjs)",
       "Bash(git fetch *)",
       "WebFetch(domain:khodz-academy-yb7f.vercel.app)",
-      "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/courses/[courseId]\")"
+      "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/courses/[courseId]\")",
+      "Bash(node --env-file=.env scripts/slides/_seed_course_pricing.mjs)",
+      "Bash(node -r dotenv/config scripts/slides/_check_pricing_migration.mjs dotenv_config_path=.env)",
+      "Bash(node --env-file=.env scripts/slides/_check_pricing_migration.mjs)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons",

@@ -24,21 +24,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid courseId' }, { status: 400 });
     }
 
+    // Pricing is admin-editable in the database (courses.admission_ghs /
+    // tuition_ghs / promo_price_ghs / deposit_percent) — falls back to the
+    // static catalog for any field admin hasn't configured yet.
+    const { data: courseRow } = await supabase
+      .from('courses')
+      .select('admission_ghs, tuition_ghs, promo_price_ghs, deposit_percent')
+      .eq('id', courseId)
+      .maybeSingle();
+
+    const admissionGhs = courseRow?.admission_ghs ?? course.admissionGhs;
+    const tuitionGhs = courseRow?.tuition_ghs ?? course.tuitionGhs;
+    const depositPercent = courseRow?.deposit_percent ?? 50;
+    const promoPriceGhs = courseRow?.promo_price_ghs ?? null;
+
     // Determine the amount dynamically based on paymentType
     let amountGhs = 0;
     if (paymentType === 'admission') {
-      amountGhs = course.admissionGhs;
+      amountGhs = admissionGhs;
     } else if (paymentType === 'deposit') {
-      // deposit_percent is admin-configurable per course (default 50) —
-      // pulled from the DB, not the static catalog, so admin can change
-      // it without a code deploy.
-      const { data: courseRow } = await supabase.from('courses').select('deposit_percent').eq('id', courseId).maybeSingle();
-      const depositPercent = courseRow?.deposit_percent ?? 50;
-      amountGhs = course.tuitionGhs * (depositPercent / 100);
+      amountGhs = tuitionGhs * (depositPercent / 100);
     } else if (paymentType === 'balance') {
-      amountGhs = course.tuitionGhs;
+      amountGhs = tuitionGhs;
     } else if (paymentType === 'full') {
-      amountGhs = course.admissionGhs + course.tuitionGhs;
+      // A promo price, when set, replaces the admission+tuition total —
+      // it's a discounted all-in price, not stacked on top.
+      amountGhs = promoPriceGhs ?? admissionGhs + tuitionGhs;
     } else {
       return NextResponse.json({ error: 'Invalid paymentType' }, { status: 400 });
     }

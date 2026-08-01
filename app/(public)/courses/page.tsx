@@ -7,9 +7,16 @@ import { COURSES } from "@/lib/courses-data";
 import { CURRENT_COHORT } from "@/lib/cohorts";
 import { createClient } from "@/lib/supabase/client";
 
+interface CoursePricing {
+  admission_ghs: number | null;
+  tuition_ghs: number | null;
+  promo_price_ghs: number | null;
+}
+
 export default function CoursesPage() {
   const [filter, setFilter] = useState("All");
   const [enrolledCourseIds, setEnrolledCourseIds] = useState<Set<string>>(new Set());
+  const [pricingById, setPricingById] = useState<Record<string, CoursePricing>>({});
 
   useEffect(() => {
     const loadEnrolments = async () => {
@@ -20,6 +27,18 @@ export default function CoursesPage() {
       setEnrolledCourseIds(new Set((data || []).map((e) => e.course_id)));
     };
     loadEnrolments();
+
+    const loadPricing = async () => {
+      const supabase = createClient();
+      const { data } = await supabase.from("courses").select("id, admission_ghs, tuition_ghs, promo_price_ghs");
+      if (!data) return;
+      const map: Record<string, CoursePricing> = {};
+      for (const row of data) {
+        map[row.id] = { admission_ghs: row.admission_ghs, tuition_ghs: row.tuition_ghs, promo_price_ghs: row.promo_price_ghs };
+      }
+      setPricingById(map);
+    };
+    loadPricing();
   }, []);
 
   const filteredCourses = COURSES.filter((course) => {
@@ -66,6 +85,13 @@ export default function CoursesPage() {
           <div className="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-stack-md gap-6">
             {filteredCourses.map((course) => {
               const isEnrolled = enrolledCourseIds.has(course.id);
+              const pricing = pricingById[course.id];
+              const admissionGhs = pricing?.admission_ghs ?? course.admissionGhs;
+              const tuitionGhs = pricing?.tuition_ghs ?? course.tuitionGhs;
+              const standardTotalGhs = admissionGhs + tuitionGhs;
+              const promoPriceGhs = pricing?.promo_price_ghs ?? null;
+              const hasPromo = promoPriceGhs != null && promoPriceGhs < standardTotalGhs;
+              const displayTotalGhs = hasPromo ? promoPriceGhs : standardTotalGhs;
               return (
                 <div key={course.id} className="glass-card glow-hover rounded-xl p-stack-md p-4 group transition-all duration-300 flex flex-col justify-between">
                   <div>
@@ -93,8 +119,11 @@ export default function CoursesPage() {
                   <div className="flex flex-col border-t border-white/5 pt-stack-md pt-4 mt-4">
                     <div className="flex items-center justify-between">
                       <span className="text-on-surface-variant text-xs">{course.category} • {course.level}</span>
-                      <span className="text-primary font-bold text-sm">
-                        {course.id === "beginner-web-design" ? "GHS 100 Reg." : `GHS ${course.totalGhs.toLocaleString()}`}
+                      <span className="text-primary font-bold text-sm flex items-baseline gap-1.5">
+                        {hasPromo && course.id !== "beginner-web-design" && (
+                          <span className="text-on-surface-variant text-[10px] line-through">GHS {standardTotalGhs.toLocaleString()}</span>
+                        )}
+                        {course.id === "beginner-web-design" ? "GHS 100 Reg." : `GHS ${displayTotalGhs.toLocaleString()}`}
                       </span>
                     </div>
                     {isEnrolled ? (
@@ -139,26 +168,33 @@ export default function CoursesPage() {
                 <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
                   <span className="material-symbols-outlined text-[120px]">payments</span>
                 </div>
-                <h4 className="font-syne text-headline-md text-on-surface mb-stack-sm text-sm font-bold mb-2">Flexible Payment</h4>
+                <h4 className="font-syne text-headline-md text-on-surface mb-stack-sm text-sm font-bold mb-2">How Payment Works</h4>
                 <p className="text-xs text-on-surface-variant mb-stack-md mb-4">
-                  We believe in making high-end education accessible. Choose from one-time payment or 0% interest monthly installments.
+                  Pay in stages instead of all at once — here&apos;s the structure for every programme.
                 </p>
-                <div className="space-y-stack-sm space-y-2">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-on-surface-variant">Full Payment</span>
-                    <span className="text-primary font-bold">15% Discount</span>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                    <div>
+                      <p className="text-xs font-semibold text-on-surface">Admission Fee</p>
+                      <p className="text-[10px] text-on-surface-variant">Secures your seat. Non-refundable.</p>
+                    </div>
                   </div>
-                  <div className="h-1 bg-white/5 w-full rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-full shadow-[0_0_8px_#0acf83]"></div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                    <div>
+                      <p className="text-xs font-semibold text-on-surface">Tuition Deposit</p>
+                      <p className="text-[10px] text-on-surface-variant">Required before your class starts.</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs font-semibold pt-1">
-                    <span className="text-on-surface-variant">Installments</span>
-                    <span className="text-on-surface">Up to 6 Months</span>
+                  <div className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                    <div>
+                      <p className="text-xs font-semibold text-on-surface">Remaining Balance</p>
+                      <p className="text-[10px] text-on-surface-variant">Due partway through the course to keep full access.</p>
+                    </div>
                   </div>
                 </div>
-                <button className="mt-stack-md mt-4 w-full bg-primary-container text-on-primary-container font-bold py-2 rounded text-xs hover:bg-primary hover:text-black transition-colors cursor-pointer">
-                  Compare Plans
-                </button>
               </div>
 
               {/* Trust Badge */}

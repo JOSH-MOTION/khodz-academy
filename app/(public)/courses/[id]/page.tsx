@@ -20,6 +20,7 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
   const [activeAccordion, setActiveAccordion] = useState<number | null>(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isEnrolledInThisCourse, setIsEnrolledInThisCourse] = useState(false);
+  const [dbPricing, setDbPricing] = useState<{ admission_ghs: number | null; tuition_ghs: number | null; promo_price_ghs: number | null } | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,6 +37,17 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
       setIsEnrolledInThisCourse(!!data);
     };
     checkAuth();
+
+    const loadPricing = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("courses")
+        .select("admission_ghs, tuition_ghs, promo_price_ghs")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (data) setDbPricing(data);
+    };
+    loadPricing();
   }, [courseId]);
 
   const handleApply = () => {
@@ -53,6 +65,14 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
 
   // Get course details from shared data, default to beginner-web-design
   const course = COURSES_MAP[courseId] || COURSES_MAP["beginner-web-design"];
+
+  // Live pricing from the database, admin-editable — falls back to the
+  // static catalog for any field admin hasn't configured yet.
+  const admissionGhs = dbPricing?.admission_ghs ?? course.admissionGhs;
+  const tuitionGhs = dbPricing?.tuition_ghs ?? course.tuitionGhs;
+  const promoPriceGhs = dbPricing?.promo_price_ghs ?? null;
+  const standardTotalGhs = admissionGhs + tuitionGhs;
+
   const instructor = {
     name: "Dr. Alex Khodz",
     role: "Ex-Lead Architect at Meta & Stripe",
@@ -269,17 +289,17 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
                           {course.id === "beginner-web-design" ? "Bootcamp Tuition" : "Tuition Fee"}
                         </span>
                         <span className="text-on-surface font-semibold">
-                          {course.id === "beginner-web-design" ? "FREE (GHS 0)" : `GHS ${course.tuitionGhs.toLocaleString()}`}
+                          {course.id === "beginner-web-design" ? "FREE (GHS 0)" : `GHS ${tuitionGhs.toLocaleString()}`}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-on-surface-variant">
                           {course.id === "beginner-web-design" ? "Registration Fee" : "Admission Fee"}
                         </span>
-                        <span className="text-on-surface font-semibold">GHS {course.admissionGhs.toLocaleString()}</span>
+                        <span className="text-on-surface font-semibold">GHS {admissionGhs.toLocaleString()}</span>
                       </div>
                     </div>
-                    
+
                     {course.id === "mern-engineering" && (
                       <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-xs mb-4 text-left">
                         <div className="flex items-center gap-2 text-primary font-bold mb-1">
@@ -292,13 +312,45 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
                       </div>
                     )}
 
+                    {promoPriceGhs != null && promoPriceGhs < standardTotalGhs && (
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 text-xs mb-4 text-left">
+                        <div className="flex items-center gap-2 text-primary font-bold mb-1">
+                          <span className="material-symbols-outlined text-[16px] text-primary">local_offer</span>
+                          <span>Limited-Time Promo Price</span>
+                        </div>
+                        <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                          Pay in full now and save — the promo price replaces the standard admission + tuition total.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="flex items-baseline justify-between mb-1">
                       <span className="text-xs text-on-surface-variant uppercase tracking-wider font-semibold">
                         {course.id === "beginner-web-design" ? "Total Registration" : "Total Price"}
                       </span>
-                      <span className="text-2xl font-syne text-primary font-bold">GHS {course.totalGhs.toLocaleString()}</span>
+                      <span className="flex items-baseline gap-2">
+                        {promoPriceGhs != null && promoPriceGhs < standardTotalGhs && (
+                          <span className="text-xs text-on-surface-variant line-through">GHS {standardTotalGhs.toLocaleString()}</span>
+                        )}
+                        <span className="text-2xl font-syne text-primary font-bold">
+                          GHS {(promoPriceGhs != null && promoPriceGhs < standardTotalGhs ? promoPriceGhs : standardTotalGhs).toLocaleString()}
+                        </span>
+                      </span>
                     </div>
                   </div>
+
+                  {course.id !== "beginner-web-design" && (
+                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 text-[10px] text-on-surface-variant leading-relaxed mb-4 space-y-1.5">
+                      <div className="flex items-start gap-2">
+                        <span className="material-symbols-outlined text-primary text-[14px] mt-0.5">info</span>
+                        <span><strong className="text-on-surface">Admission fee is non-refundable</strong> — it secures your seat in the cohort.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="material-symbols-outlined text-primary text-[14px] mt-0.5">event_available</span>
+                        <span>A <strong className="text-on-surface">tuition deposit is required before class starts</strong>; the remaining balance is due partway through the course.</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-stack-md space-y-3 mb-stack-lg mb-6">
                     <button
                       onClick={handleApply}
@@ -335,7 +387,7 @@ export default function CourseDetailsPage({ params }: CourseDetailsProps) {
                   </div>
                   <div>
                     <h6 className="text-xs font-bold">Secure Checkout</h6>
-                    <p className="text-[10px] text-on-surface-variant">30-day money back guarantee.</p>
+                    <p className="text-[10px] text-on-surface-variant">Payments processed securely via Paystack.</p>
                   </div>
                 </div>
               </div>

@@ -6,40 +6,53 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { COURSES_MAP } from "@/lib/courses-data";
 
-// Dynamically generate payment details for any course from the shared library
-function getCoursePaymentInfo(courseId: string, option: "admission" | "full") {
+interface PricingOverride {
+  admission_ghs: number | null;
+  tuition_ghs: number | null;
+  promo_price_ghs: number | null;
+}
+
+// Dynamically generate payment details for any course from the shared library,
+// preferring live admin-editable pricing from the database when available.
+function getCoursePaymentInfo(courseId: string, option: "admission" | "full", override: PricingOverride | null) {
   const course = COURSES_MAP[courseId] || COURSES_MAP["beginner-web-design"];
   const isBootcamp = course.id === "beginner-web-design";
   const isVacation = course.id.includes("vacation");
 
-  let baseAmount = option === "admission" ? course.admissionGhs : (course.admissionGhs + course.tuitionGhs);
-  
+  const admissionGhs = override?.admission_ghs ?? course.admissionGhs;
+  const tuitionGhs = override?.tuition_ghs ?? course.tuitionGhs;
+  const promoPriceGhs = override?.promo_price_ghs ?? null;
+  const standardTotalGhs = admissionGhs + tuitionGhs;
+  const fullTotalGhs = promoPriceGhs != null && promoPriceGhs < standardTotalGhs ? promoPriceGhs : standardTotalGhs;
+
+  const baseAmount = option === "admission" ? admissionGhs : fullTotalGhs;
+
   let platformFee = 50;
   if (option === "admission") {
-    if (course.admissionGhs === 250) platformFee = 25;
-    else if (course.admissionGhs === 200) platformFee = 20;
-    else if (course.admissionGhs === 100) platformFee = 15;
+    if (admissionGhs === 250) platformFee = 25;
+    else if (admissionGhs === 200) platformFee = 20;
+    else if (admissionGhs === 100) platformFee = 15;
   } else {
     platformFee = 100; // Flat platform fee for full tuition
   }
-  
+
   const netPrice = baseAmount - platformFee;
 
   return {
     id: course.id,
     name: course.title,
-    cohort: isBootcamp 
-      ? "Phase 1 - Introductory Bootcamp" 
-      : isVacation 
-        ? "Vacation Program - Cohort 01" 
+    cohort: isBootcamp
+      ? "Phase 1 - Introductory Bootcamp"
+      : isVacation
+        ? "Vacation Program - Cohort 01"
         : "Cohort 04",
     price: `GHS ${netPrice.toFixed(2)}`,
     fee: `GHS ${platformFee.toFixed(2)}`,
     total: `GHS ${baseAmount.toFixed(2)}`,
     feeLabel: (isBootcamp || isVacation) ? "Registration processing fee" : "Platform access fee",
-    admissionGhs: course.admissionGhs,
-    tuitionGhs: course.tuitionGhs,
-    totalGhs: course.admissionGhs + course.tuitionGhs,
+    admissionGhs,
+    tuitionGhs,
+    totalGhs: fullTotalGhs,
   };
 }
 
@@ -51,7 +64,8 @@ function AdmissionPaymentContent() {
   const courseId = searchParams.get("course") || "beginner-web-design";
   
   const [paymentOption, setPaymentOption] = useState<"admission" | "full">("admission");
-  const courseInfo = getCoursePaymentInfo(courseId, paymentOption);
+  const [pricingOverride, setPricingOverride] = useState<PricingOverride | null>(null);
+  const courseInfo = getCoursePaymentInfo(courseId, paymentOption, pricingOverride);
 
   const [formData, setFormData] = useState({ name: "", email: "", phone: "" });
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -76,6 +90,17 @@ function AdmissionPaymentContent() {
       setLoadingUser(false);
     };
     loadUser();
+
+    const loadPricing = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("courses")
+        .select("admission_ghs, tuition_ghs, promo_price_ghs")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (data) setPricingOverride(data);
+    };
+    loadPricing();
   }, [courseId, router]);
 
   const handlePay = async (e: React.FormEvent) => {
@@ -193,6 +218,18 @@ function AdmissionPaymentContent() {
               </div>
             </div>
 
+            {/* Payment structure notice */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-[10px] text-on-surface-variant leading-relaxed space-y-1.5">
+              <div className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary text-[14px] mt-0.5">info</span>
+                <span><strong className="text-on-surface">The admission fee is non-refundable</strong> — it secures your seat in the cohort.</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-primary text-[14px] mt-0.5">event_available</span>
+                <span>If you choose Admission Only, a <strong className="text-on-surface">tuition deposit is required before class starts</strong> to unlock course content.</span>
+              </div>
+            </div>
+
             {/* Highlight Image */}
             <div className="rounded-xl overflow-hidden relative h-48 border border-white/10 group">
               <img
@@ -282,7 +319,7 @@ function AdmissionPaymentContent() {
                         <span className="text-white font-bold text-xs">Admission Only</span>
                       </div>
                       <p className="text-[10px] text-on-surface-variant leading-relaxed">
-                        Pay GHS {courseInfo.admissionGhs.toFixed(2)} to secure admission. The remaining tuition can be paid in installments.
+                        Pay GHS {courseInfo.admissionGhs.toFixed(2)} to secure admission. Non-refundable. You&apos;ll pay a tuition deposit before class starts, then the balance later.
                       </p>
                     </div>
 

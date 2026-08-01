@@ -12,12 +12,15 @@ export async function PATCH(request: Request, { params }: RouteContext<'/api/adm
 
     const { courseId } = await params
     const body = await request.json()
-    const { endDate, depositPercent, reminderLeadDays } = body || {}
+    const { endDate, depositPercent, reminderLeadDays, admissionGhs, tuitionGhs, promoPriceGhs } = body || {}
 
     const payload: Record<string, unknown> = {}
     if (endDate !== undefined) payload.end_date = endDate || null
     if (depositPercent !== undefined) payload.deposit_percent = depositPercent
     if (reminderLeadDays !== undefined) payload.reminder_lead_days = reminderLeadDays
+    if (admissionGhs !== undefined) payload.admission_ghs = admissionGhs === '' ? null : admissionGhs
+    if (tuitionGhs !== undefined) payload.tuition_ghs = tuitionGhs === '' ? null : tuitionGhs
+    if (promoPriceGhs !== undefined) payload.promo_price_ghs = promoPriceGhs === '' ? null : promoPriceGhs
 
     if (Object.keys(payload).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
