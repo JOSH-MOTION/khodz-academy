@@ -55,6 +55,14 @@ export default function AdminCoursesPage() {
   const [savingLessonId, setSavingLessonId] = useState<string | null>(null);
   const [editUrls, setEditUrls] = useState<Record<string, LessonEditState>>({});
 
+  // Course settings modal state
+  const [settingsCourse, setSettingsCourse] = useState<{ id: string; title: string } | null>(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [endDate, setEndDate] = useState("");
+  const [depositPercent, setDepositPercent] = useState(50);
+  const [reminderLeadDays, setReminderLeadDays] = useState(21);
+
   const filtered = courses.filter((c) => {
     const matchCat = filter === "All" || c.category === filter;
     const matchSearch =
@@ -187,6 +195,49 @@ export default function AdminCoursesPage() {
     }
   };
 
+  // Fetch a course's scheduling/deposit settings from the database
+  const openSettingsModal = async (courseId: string, courseTitle: string) => {
+    setSettingsCourse({ id: courseId, title: courseTitle });
+    setLoadingSettings(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("courses")
+        .select("end_date, deposit_percent, reminder_lead_days")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (error) throw error;
+      setEndDate(data?.end_date || "");
+      setDepositPercent(data?.deposit_percent ?? 50);
+      setReminderLeadDays(data?.reminder_lead_days ?? 21);
+    } catch (err) {
+      console.error("Failed to load course settings:", err);
+      alert("Error loading course settings.");
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    if (!settingsCourse) return;
+    setSavingSettings(true);
+    try {
+      const res = await fetch(`/api/admin/courses/${settingsCourse.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endDate: endDate || null, depositPercent, reminderLeadDays }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Save failed");
+      alert("Course settings updated!");
+      setSettingsCourse(null);
+    } catch (err) {
+      alert("Save failed: " + (err instanceof Error ? err.message : "Unknown error"));
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   return (
     <AdminPinGuard>
       <div className="bg-background text-on-background font-body-md min-h-screen flex">
@@ -306,6 +357,13 @@ export default function AdminCoursesPage() {
                           >
                             <span className="material-symbols-outlined text-xs">folder_open</span>
                             Links
+                          </button>
+                          <button
+                            onClick={() => openSettingsModal(course.id, course.title)}
+                            className="p-1.5 hover:bg-surface-variant rounded text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                            title="Deposit & Deadline Settings"
+                          >
+                            <span className="material-symbols-outlined text-base">tune</span>
                           </button>
                           <Link
                             href={`/courses/${course.id}`}
@@ -520,6 +578,96 @@ export default function AdminCoursesPage() {
                 className="bg-white/10 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-white/20 transition-all cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Course Settings Modal */}
+      {settingsCourse && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-container border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-surface-container-highest">
+              <div>
+                <h3 className="font-syne text-md font-bold text-primary">Deposit & Deadline: {settingsCourse.title}</h3>
+                <p className="text-[10px] text-on-surface-variant mt-1">
+                  Controls the deposit price and when unpaid students get reminded before losing access.
+                </p>
+              </div>
+              <button
+                onClick={() => setSettingsCourse(null)}
+                className="text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {loadingSettings ? (
+                <div className="py-8 flex justify-center">
+                  <span className="material-symbols-outlined text-primary text-3xl animate-spin">progress_activity</span>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-on-surface-variant font-bold uppercase">Cohort End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                    />
+                    <p className="text-[9px] text-on-surface-variant">When the current cohort finishes. Used to calculate the payment deadline below.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-on-surface-variant font-bold uppercase">Deposit Percentage of Tuition</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={depositPercent}
+                        onChange={(e) => setDepositPercent(Number(e.target.value))}
+                        className="w-24 bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                      />
+                      <span className="text-xs text-on-surface-variant">%</span>
+                    </div>
+                    <p className="text-[9px] text-on-surface-variant">e.g. 50 means students pay half the tuition upfront to unlock content.</p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-on-surface-variant font-bold uppercase">Reminder Lead Time (days before cohort ends)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={reminderLeadDays}
+                      onChange={(e) => setReminderLeadDays(Number(e.target.value))}
+                      className="w-24 bg-background border border-white/10 rounded px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+                    />
+                    <p className="text-[9px] text-on-surface-variant">
+                      e.g. 21 = balance is due 3 weeks before the cohort ends; 7 = due 1 week before (good for shorter, 1-month courses).
+                      Deposited students get an email + in-app reminder as this date approaches, and lose slide/video access if it passes unpaid.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-4 bg-surface-container-highest border-t border-white/10 flex justify-end gap-3">
+              <button
+                onClick={() => setSettingsCourse(null)}
+                className="bg-white/10 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-white/20 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveSettings}
+                disabled={savingSettings || loadingSettings}
+                className="bg-primary text-black font-bold text-xs px-4 py-2 rounded-lg hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {savingSettings ? "Saving…" : "Save Settings"}
               </button>
             </div>
           </div>

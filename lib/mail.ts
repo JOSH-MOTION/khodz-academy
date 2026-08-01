@@ -130,6 +130,48 @@ export async function sendPaymentDueEmail(
   return sendEmail({ to: toEmail, subject, html });
 }
 
+/** Automated reminder sent by the daily cron job as a student's payment
+ * deadline approaches — distinct from sendPaymentDueEmail, which fires
+ * once immediately at deposit time to state the deadline for the record. */
+export async function sendUrgentPaymentReminderEmail(
+  toEmail: string,
+  studentName: string,
+  courseName: string,
+  balanceGhs: number,
+  deadlineString: string
+) {
+  const deadlineDate = new Date(deadlineString).toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const subject = `⚠️ Action Needed: Balance Due Soon - ${courseName}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; color: #333;">
+      <h2 style="color: #ea4335; border-bottom: 2px solid #eaeaea; padding-bottom: 10px;">YOUR BALANCE IS DUE SOON</h2>
+      <p>Hello <strong>${studentName}</strong>,</p>
+      <p>This is a reminder that your remaining balance of <strong>GHS ${balanceGhs.toFixed(2)}</strong> for <strong>${courseName}</strong> is due by <strong>${deadlineDate}</strong>.</p>
+
+      <div style="background: #fff5f5; border-left: 4px solid #ea4335; padding: 15px; margin: 20px 0;">
+        <p style="margin: 0; font-weight: bold; color: #ea4335;">If this isn't paid by the deadline, you will lose access to slides and videos for upcoming weeks until it's settled.</p>
+      </div>
+
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payment/balance"
+           style="background: #45ec9d; color: black; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+           Pay Remaining Balance Now
+        </a>
+      </p>
+
+      <p>Regards,<br/><strong>Khodz Academy Billing Team</strong></p>
+    </div>
+  `;
+
+  return sendEmail({ to: toEmail, subject, html });
+}
+
 export async function sendWelcomeEmail(toEmail: string, studentName: string) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const logoUrl = `${siteUrl}/k3.png`;

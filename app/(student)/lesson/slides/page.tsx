@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import CourseSwitcher from "@/components/CourseSwitcher";
+import AdmissionRequiredGate from "@/components/AdmissionRequiredGate";
 
 interface DbLesson {
   id: string;
@@ -42,6 +43,7 @@ function LessonSlidesContent() {
   const requestedCourseId = searchParams.get("course");
 
   const [loading, setLoading] = useState(true);
+  const [notEnrolled, setNotEnrolled] = useState(false);
   const [studentEmail, setStudentEmail] = useState("");
 
   const [enrolments, setEnrolments] = useState<Enrolment[]>([]);
@@ -76,7 +78,8 @@ function LessonSlidesContent() {
           .eq("student_id", user.id);
 
         if (enrolError || !allEnrolments || allEnrolments.length === 0) {
-          router.push("/courses");
+          setNotEnrolled(true);
+          setLoading(false);
           return;
         }
 
@@ -244,6 +247,10 @@ function LessonSlidesContent() {
         <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
       </div>
     );
+  }
+
+  if (notEnrolled) {
+    return <AdmissionRequiredGate />;
   }
 
   const totalSlides = slides.length;

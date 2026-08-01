@@ -45,10 +45,12 @@
       "Bash(node --env-file=.env scripts/slides/_check_migration9.mjs)",
       "Bash(rm -f scripts/slides/_check_migration9.mjs)",
       "Bash(git fetch *)",
-      "WebFetch(domain:khodz-academy-yb7f.vercel.app)"
+      "WebFetch(domain:khodz-academy-yb7f.vercel.app)",
+      "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/courses/[courseId]\")"
     ],
     "additionalDirectories": [
-      "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons"
+      "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons",
+      "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\courses"
     ]
   }
 }

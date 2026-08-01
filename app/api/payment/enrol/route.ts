@@ -29,7 +29,12 @@ export async function POST(request: Request) {
     if (paymentType === 'admission') {
       amountGhs = course.admissionGhs;
     } else if (paymentType === 'deposit') {
-      amountGhs = course.tuitionGhs * 0.5;
+      // deposit_percent is admin-configurable per course (default 50) —
+      // pulled from the DB, not the static catalog, so admin can change
+      // it without a code deploy.
+      const { data: courseRow } = await supabase.from('courses').select('deposit_percent').eq('id', courseId).maybeSingle();
+      const depositPercent = courseRow?.deposit_percent ?? 50;
+      amountGhs = course.tuitionGhs * (depositPercent / 100);
     } else if (paymentType === 'balance') {
       amountGhs = course.tuitionGhs;
     } else if (paymentType === 'full') {

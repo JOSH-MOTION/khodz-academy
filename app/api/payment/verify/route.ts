@@ -80,23 +80,36 @@ export async function POST(request: Request) {
   }
 
   if (paymentType === 'deposit') {
+    // Deadline is based on the course's actual end date (admin-configured)
+    // minus a lead time, e.g. "3 weeks before the course ends" — so both
+    // the reminder cron and the waterline lockout share the same date.
+    // Falls back to a flat 60-day window if admin hasn't set an end_date yet.
+    const { data: courseRow } = await supabase.from('courses').select('end_date, reminder_lead_days').eq('id', courseId).maybeSingle()
+
     const deadline = new Date()
-    deadline.setDate(deadline.getDate() + 60) // 60 day payment window
-    
+    if (courseRow?.end_date) {
+      const end = new Date(courseRow.end_date)
+      end.setDate(end.getDate() - (courseRow.reminder_lead_days ?? 21))
+      deadline.setTime(end.getTime() > Date.now() ? end.getTime() : Date.now())
+    } else {
+      deadline.setDate(deadline.getDate() + 60) // fallback: 60 day payment window
+    }
+
     // Get current week to set waterline
     const { data: weeks } = await supabase.from('weeks')
       .select('week_number').eq('course_id', courseId).order('week_number')
-      
+
     const currentWeek = weeks?.length ?? 0
-    
+
     await supabase.from('enrolments')
-      .upsert({ 
-        student_id: studentId, 
+      .upsert({
+        student_id: studentId,
         course_id: courseId,
-        tier: 'deposited', 
+        tier: 'deposited',
         deposit_paid_at: new Date().toISOString(),
-        payment_deadline: deadline.toISOString(), 
-        waterline_week: currentWeek 
+        payment_deadline: deadline.toISOString(),
+        waterline_week: currentWeek,
+        reminder_sent_at: null,
       }, { onConflict: 'student_id,course_id' })
 
     // Send confirmation receipt

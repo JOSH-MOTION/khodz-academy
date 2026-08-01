@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import AppSidebar from "@/components/AppSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import CourseSwitcher from "@/components/CourseSwitcher";
+import AdmissionRequiredGate from "@/components/AdmissionRequiredGate";
 
 interface DbLesson {
   id: string;
@@ -50,6 +51,7 @@ function VideoLessonContent() {
   const requestedCourseId = searchParams.get("course");
 
   const [loading, setLoading] = useState(true);
+  const [notEnrolled, setNotEnrolled] = useState(false);
   const [studentEmail, setStudentEmail] = useState("");
   const [studentId, setStudentId] = useState("");
 
@@ -89,8 +91,8 @@ function VideoLessonContent() {
           .eq("student_id", user.id);
 
         if (enrolError || !allEnrolments || allEnrolments.length === 0) {
-          // Redirect to courses if not registered
-          router.push("/courses");
+          setNotEnrolled(true);
+          setLoading(false);
           return;
         }
 
@@ -284,6 +286,10 @@ function VideoLessonContent() {
         <span className="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
       </div>
     );
+  }
+
+  if (notEnrolled) {
+    return <AdmissionRequiredGate />;
   }
 
   const embedUrl = getEmbedUrl(currentLesson?.video_url || null);
