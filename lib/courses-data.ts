@@ -750,6 +750,69 @@ export const COURSES: Course[] = [
     tagline: "Built for students with HTML/CSS/JS experience. Level up by mastering React components, state, props, API data streams, cloud deployment, and a stunning GitHub portfolio.",
     rating: "4.9 (60 Students)",
     enrolledCount: 60
+  },
+  {
+    id: "vacation-backend-development",
+    active: true,
+    title: "Backend Development Bootcamp",
+    category: "Full Stack",
+    duration: "2 Months",
+    tuitionGhs: 2000,
+    admissionGhs: 200,
+    totalGhs: 2200,
+    modes: ["Online Live Classes (Google Meet)"],
+    outcomes: [
+      "Building RESTful APIs with Node.js and Express",
+      "Designing and querying MongoDB databases with Mongoose",
+      "Real authentication & authorization with bcrypt and JWT",
+      "File uploads with Multer and Cloudinary",
+      "Sending emails for verification and password resets with Nodemailer",
+      "Validating and sanitizing input, and securing APIs (CORS, Helmet, rate limiting)",
+      "Documenting APIs with Swagger/OpenAPI",
+      "Deploying production backends to Render/Railway"
+    ],
+    projects: [
+      "Hello API",
+      "Authentication API (bcrypt + JWT)",
+      "School Management API (RBAC)",
+      "Profile Management API (Cloudinary uploads)",
+      "Authentication System with Email (Nodemailer)",
+      "Final Capstone: Blog, E-commerce, or custom Production API"
+    ],
+    prerequisites: [
+      "JavaScript fundamentals (from Web Foundations or equivalent)",
+      "Completion of Advanced Web Apps (React Foundations) recommended but not required"
+    ],
+    syllabus: [
+      {
+        num: "01",
+        title: "Month 1: Backend Foundations (Weeks 1–4)",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "Intro to Backend Dev, Node.js & Express", preview: true, type: "video" },
+          { title: "MongoDB, Mongoose & Database Design", preview: true, type: "video" },
+          { title: "Authentication: bcrypt, JWT & RBAC", preview: false, type: "lock" },
+          { title: "Error Handling, Validation & API Docs", preview: false, type: "lock" }
+        ]
+      },
+      {
+        num: "02",
+        title: "Month 2: Real-World Backend Development (Weeks 5–8)",
+        details: "12 Sessions • 3 days/week • 1.5–2 hours/session",
+        sessions: [
+          { title: "File Uploads with Multer & Cloudinary", preview: false, type: "lock" },
+          { title: "Email & Notifications with Nodemailer", preview: false, type: "lock" },
+          { title: "API Security, Performance & Architecture", preview: false, type: "lock" },
+          { title: "Deployment, Monitoring & Capstone", preview: false, type: "lock" }
+        ]
+      }
+    ],
+    img: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80",
+    level: "Intermediate",
+    sessionsCount: "24 Sessions",
+    tagline: "The missing half of the frontend courses. Build, secure, document, and deploy real production-style REST APIs with Node.js, Express, MongoDB, and JWT authentication.",
+    rating: "4.9 (40 Students)",
+    enrolledCount: 40
   }
 ];
 

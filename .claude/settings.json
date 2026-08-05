@@ -49,7 +49,13 @@
       "Bash(mkdir -p \"c:/Users/Khodz/Desktop/khodz-academy/app/api/admin/courses/[courseId]\")",
       "Bash(node --env-file=.env scripts/slides/_seed_course_pricing.mjs)",
       "Bash(node -r dotenv/config scripts/slides/_check_pricing_migration.mjs dotenv_config_path=.env)",
-      "Bash(node --env-file=.env scripts/slides/_check_pricing_migration.mjs)"
+      "Bash(node --env-file=.env scripts/slides/_check_pricing_migration.mjs)",
+      "Bash(node --env-file=.env scripts/slides/_check_courses_state.mjs)",
+      "Bash(git mv *)",
+      "Bash(mv \"content/Backend Development Bootcamp\" \"content/backend-development\")",
+      "Bash(node scripts/slides/generate.mjs --course=backend-development)",
+      "Bash(node --env-file=.env scripts/slides/_seed_backend_course.mjs)",
+      "Bash(node --env-file=.env scripts/slides/publish.mjs --courseId=vacation-backend-development --contentSlug=backend-development)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Khodz\\Desktop\\khodz-academy\\app\\api\\admin\\lessons",

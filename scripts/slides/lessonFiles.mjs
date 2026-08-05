@@ -26,6 +26,7 @@ const SESSIONS_PER_WEEK = {
   "frontend-development": 2,
   "react-development": 3,
   "python-fundamentals": 3,
+  "backend-development": 3,
 };
 const DEFAULT_SESSIONS_PER_WEEK = 2;
 
